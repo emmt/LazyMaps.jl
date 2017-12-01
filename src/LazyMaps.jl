@@ -9,6 +9,8 @@
 # All rights reserved.
 #
 
+isdefined(Base, :__precompile__) && __precompile__(true)
+
 module LazyMaps
 
 export

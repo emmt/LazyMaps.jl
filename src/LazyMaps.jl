@@ -5,8 +5,10 @@
 #
 #------------------------------------------------------------------------------
 #
+# This file is part of the `LazyMaps.jl` package licensed under the MIT
+# "Expat" License.
+#
 # Copyright (C) 2017, Éric Thiébaut.
-# All rights reserved.
 #
 
 isdefined(Base, :__precompile__) && __precompile__(true)

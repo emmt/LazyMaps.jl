@@ -16,17 +16,26 @@ isdefined(Base, :__precompile__) && __precompile__(true)
 module LazyMaps
 
 export
+    LazyMap,
     lazymap
 
 # Singleton type to indicate that the element type is unknown.
 struct Unknown; end
 const unknown = Unknown()
 
-struct LazyMap{F <: Function, A, T}
-    f::F # function
+struct LazyMapArray{F,A<:AbstractArray,T,N} <: AbstractArray{T,N}
+    f::F # function or callable
     a::A # input array/collection
     v::T # first value or `unknown`
 end
+
+struct LazyMapOther{F,A,T,N}
+    f::F # function or callable
+    a::A # input array/collection
+end
+
+const LazyMap{F,A,T,N} = Union{LazyMapArray{F,A,T,N},
+                               LazyMapOther{F,A,T,N}}
 
 """
     lazymap(f, a [, guess=true])
@@ -46,33 +55,37 @@ that all elements have the same type, *i.e.* the elements of result are
 See also [`map`](@ref).
 
 """
-lazymap(f, a) = _lazymap(f, a, Base.iteratorsize(a))
-lazymap(f, a, guess::Bool) =
-    (guess ? lazymap(f, a) : LazyMap(f, a, unknown))
+lazymap(f, a::AbstractArray) = _lazymap(f, a, f(first(a)))
+lazymap(f, a::AbstractArray, guess::Bool) =
+    (guess ? lazymap(f, a) : _lazymap(f, a, unknown))
+lazymap(f::F, a::A) where {F,A} = LazyMapOther{F,A,Unknown,0}(f, a)
+lazymap(f::F, a::A, ::Bool) where {F,A} = LazyMapOther{F,A,Unknown,0}(f, a)
 
-_lazymap(f, a, ::Union{Base.HasLength,Base.HasShape}) =
-    LazyMap(f, a, length(a) ≥ 1 ? f(first(a)) : unknown)
-_lazymap(f, a, ::Base.IsInfinite) =
-    LazyMap(f, a, f(first(a)))
-_lazymap(f, a, ::Base.SizeUnknown) =
-    LazyMap(f, a, f(first(a)))
+_lazymap(f::F, a::A, v::T) where {F,A<:AbstractArray{E,N},T} where {E,N} =
+    LazyMapArray{F,A,T,N}(f, a, v)
 
-Base.getindex(m::LazyMap{F,A,T}, key...) where {F,A,T} = m.f(m.a[key...]) :: T
-Base.getindex(m::LazyMap{F,A,Unknown}, key...) where {F,A} = m.f(m.a[key...])
-Base.eltype(m::LazyMap{F,A,T}) where {F,A,T} = T
-Base.eltype(m::LazyMap{F,A,Unknown}) where {F,A} = error("element type is unknown")
+Base.getindex(m::LazyMapArray{F,A,T,N}, key...) where {F,A,T,N} =
+    m.f(m.a[key...]) :: T
+Base.getindex(m::LazyMap{F,A,Unknown,N}, key...) where {F,A,N} =
+    m.f(m.a[key...])
+
+Base.eltype(m::LazyMap{F,A,T,N}) where {F,A,T,N} = T
+Base.eltype(m::LazyMap{F,A,Unknown,N}) where {F,A,N} =
+    error("element type is unknown")
 Base.length(m::LazyMap) = length(m.a)
-Base.ndims(m::LazyMap) = ndims(m.a)
-Base.size(m::LazyMap) = size(m.a)
-Base.size(m::LazyMap, d) = size(m.a, d)
-Base.stride(m::LazyMap, k) = stride(m.a, k)
-Base.strides(m::LazyMap) = strides(m.a)
-Base.indices(m::LazyMap) = indices(m.a)
-Base.indices(m::LazyMap, d) = indices(m.a, d)
-Base.first(m::LazyMap{F,A,Unknown}) where {F,A} = m.f(first(m.a))
-Base.first(m::LazyMap) = m.v
+Base.ndims(m::LazyMapArray{F,A,T,N}) where {F,A,T,N} = N
+Base.size(m::LazyMapArray) = size(m.a)
+Base.size(m::LazyMapArray, d) = size(m.a, d)
+Base.stride(m::LazyMapArray, k) = stride(m.a, k)
+Base.strides(m::LazyMapArray) = strides(m.a)
+Base.indices(m::LazyMapArray) = indices(m.a)
+Base.indices(m::LazyMapArray, d) = indices(m.a, d)
+Base.first(m::LazyMap{F,A,Unknown,N}) where {F,A,N} = m.f(first(m.a))
+Base.first(m::LazyMapArray) = m.v
 Base.last(m::LazyMap) = m.f(last(m.a))
 Base.endof(m::LazyMap) = endof(m.a)
+#Base.eachindex(m::LazyMap) = eachindex(m.a)
+#Base.eachindex(m::LazyMap, args...) = eachindex(m.a, args...)
 
 # Make an instance of a LazyMap an iterable.
 Base.start(m::LazyMap) = start(m.a)
@@ -83,13 +96,13 @@ function Base.next(m::LazyMap, state)
 end
 
 # Provide traits for LazyMap instances.
-Base.IndexStyle(::Type{LazyMap{F,A,T}}) where {F,A,T} =
+Base.IndexStyle(::Type{LazyMapArray{F,A,T,N}}) where {F,A,T,N} =
     Base.IndexStyle(A)
-Base.iteratorsize(::Type{LazyMap{F,A,T}}) where {F,A,T} =
+Base.iteratorsize(::Type{LazyMap{F,A,T,N}}) where {F,A,T,N} =
     Base.iteratorsize(A)
-Base.iteratoreltype(::Type{LazyMap{F,A,Unknown}}) where {F,A} =
+Base.iteratoreltype(::Type{LazyMap{F,A,Unknown,N}}) where {F,A,N} =
     Base.EltypeUnknown()
-Base.iteratoreltype(::Type{LazyMap{F,A,T}}) where {F,A,T} =
+Base.iteratoreltype(::Type{LazyMap{F,A,T,N}}) where {F,A,T,N} =
     Base.HasEltype()
 
 end

@@ -7,12 +7,10 @@ This package implements lazy maps for [Julia](http://julialang.org/).  A
 whose elements are the result of the function applied to the elements of
 the embedded array or collection.  This is similar to calling `map` except
 that evaluation is performed *on the fly* and thus avoids creating an
-intermediate array or collection.
-
-*Lazy maps* are useful to provide an elementwise filtered array or
-collection to some method without creating an intermediate array or
-collection.  This can save storage and speedup computations for large
-arrays or collections.
+intermediate array or collection.  *Lazy maps* are therefore useful to
+provide an elementwise filtered array or collection to some method without
+creating an intermediate array or collection.  This can save storage and
+speedup computations for large arrays or collections.
 
 
 ## Usage

@@ -1,6 +1,6 @@
 # LazyMaps.jl
 
-[![Build Status](https://travis-ci.org/emmt/LazyMaps.jl.svg?branch=master)](https://travis-ci.org/emmt/LazyMaps.jl)
+[![Build Status](https://travis-ci.com/emmt/LazyMaps.jl.svg?branch=master)](https://travis-ci.com/emmt/LazyMaps.jl)
 
 This package implements lazy maps for [Julia](http://julialang.org/).  A
 *lazy map* associates a function and an array or a collection in an object

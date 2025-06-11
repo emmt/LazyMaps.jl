@@ -22,6 +22,7 @@ export
 # Singleton type to indicate that the element type is unknown.
 struct Unknown; end
 const unknown = Unknown()
+using TypeUtils
 
 struct LazyMapArray{F,A<:AbstractArray,T,N} <: AbstractArray{T,N}
     f::F # function or callable

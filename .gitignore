@@ -1,9 +1,4 @@
+*.jl.*.cov
 *.jl.cov
 *.jl.mem
-
-# Specific files/directories
-work/
-
-# Backup files
-*~
-
+/Manifest*.toml

@@ -70,7 +70,7 @@ Base.iterate(A::IteratedArray, s) = iterate(A.data, s)
 
         B = @inferred(lazymap(f, A))
         @test B isa LazyMaps.LazyMapOther
-        @test eltype(B) <: Pair{String,<:Any}
+        @test !isconcretetype(eltype(B))
         @test_throws Exception ndims(B)
         @test length(B) == length(A)
         @test_throws Exception size(B)

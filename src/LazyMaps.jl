@@ -42,19 +42,24 @@ though `T` may be abstract.
 
 The call:
 
-    B = lazymap(T, A)
-
-with `T::Type` is a shortcut for:
-
     B = lazymap(T, identity, A)
 
-which builds an object `B` that lazily converts the elements of `A` to type `T`.
+builds an object `B` that lazily **converts** the elements of `A` to type `T`. By
+contrast:
+
+    B = lazymap(T, A)
+
+is a shortcut for `B = lazymap(T, T, A)` that lazily **constructs** an object of type `T`
+for each element of `A`. In the former case, an element `b` of `B` is given by `b =
+convert(T, a)::T` with `a` the corresponding element of `A` ; while, in the latter case,
+it is given by `b = T(a)::T`. Note that, in both cases, it is asserted that `b` is indeed
+of type `T`. The two cases are equivalent if `T` is a number.
 
 """
 lazymap(func::F, data::A) where {F,A} = lazymap(infer_eltype(func, data), func, data)
 lazymap(::Type{T}, func, data::AbstractArray) where {T} = LazyMapArray{T}(func, data)
 lazymap(::Type{T}, func, data::Any) where {T} = LazyMapOther{T}(func, data)
-lazymap(::Type{T}, data) where {T} = lazymap(T, identity, data)
+lazymap(::Type{T}, data) where {T} = lazymap(T, T, data)
 
 infer_eltype(func::F, data::A) where {F,A} =
     Base.IteratorEltype(A) isa Base.HasEltype ? Base.promote_op(func, eltype(A)) : Any
@@ -88,7 +93,7 @@ for (L, S, Idecl, Icall) in ((false, :IndexCartesian, :(I::Vararg{Int,N}), :(I..
         @inline function Base.getindex(m::LazyMapArray{T,N,F,A,$L}, $Idecl) where {T,N,F,A}
             @boundscheck checkbounds(m, $Icall)
             x = @inbounds getindex(m.data, $Icall)
-            return as(T, m.func(x))
+            return result(T, m.func, x)
         end
         @inline function Base.setindex!(m::LazyMapArray{T,N,F,A,$L}, x, $Idecl) where {T,N,F,A}
             @boundscheck checkbounds(A, $Icall)
@@ -97,6 +102,10 @@ for (L, S, Idecl, Icall) in ((false, :IndexCartesian, :(I::Vararg{Int,N}), :(I..
         end
     end
 end
+
+# Compute the value of a LazyMap element.
+result(::Type{T}, f::F, x) where {T,F} = as(T, f(x))
+result(::Type{T}, ::Type{T}, x) where {T} = T(x)::T
 
 # Iterator and (partial) abstract array API for instances of LazyMapOther.
 Base.eltype(m::LazyMapOther{T,N}) where {T,N} = T
@@ -124,7 +133,7 @@ Base.iterate(m::LazyMapOther) = _iterate_result(m, iterate(m.data))
 Base.iterate(m::LazyMapOther, s) = _iterate_result(m, iterate(m.data, s))
 _iterate_result(m::LazyMapOther{T}, r::Nothing) where {T} = nothing
 _iterate_result(m::LazyMapOther{T}, r::Tuple{Any,Any}) where {T} =
-    (as(T, m.func(r[1])), r[2])
+    (result(T, m.func, r[1]), r[2])
 
 @noinline throw_read_only() =
     throw(ArgumentError("attempt to write read-only lazily mapped array"))

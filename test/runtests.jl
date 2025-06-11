@@ -61,6 +61,12 @@ Base.iterate(A::IteratedArray, s) = iterate(A.data, s)
             @test IndexStyle(C) == IndexStyle(C)
             @test B == f.(C)
         end
+
+        T′ = T <: Complex ? Complex{Float64} : Float64
+        B = @inferred(lazymap(T′, A))
+        @test B === lazymap(T′, identity, A)
+        @test eltype(B) === T′
+        @test B == T′.(A)
     end
 
     @testset "collections" begin
@@ -104,6 +110,13 @@ Base.iterate(A::IteratedArray, s) = iterate(A.data, s)
         for (a,c) in zip(A,C)
             @test c === f(a)
         end
+
+        A = (1, 2f0, 3.0, 0x04)
+        B = @inferred(lazymap(Int, A))
+        for (a,b) in zip(A,B)
+            @test b === Int(a)
+        end
+
     end
 end
 

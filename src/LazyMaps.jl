@@ -40,10 +40,21 @@ inferred from `f` and from the element type of `A`. The returned object `B` has
 type-stable element type in the sense that its element have guaranteed type `T`, even
 though `T` may be abstract.
 
+The call:
+
+    B = lazymap(T, A)
+
+with `T::Type` is a shortcut for:
+
+    B = lazymap(T, identity, A)
+
+which builds an object `B` that lazily converts the elements of `A` to type `T`.
+
 """
 lazymap(func::F, data::A) where {F,A} = lazymap(infer_eltype(func, data), func, data)
 lazymap(::Type{T}, func, data::AbstractArray) where {T} = LazyMapArray{T}(func, data)
 lazymap(::Type{T}, func, data::Any) where {T} = LazyMapOther{T}(func, data)
+lazymap(::Type{T}, data) where {T} = lazymap(T, identity, data)
 
 infer_eltype(func::F, data::A) where {F,A} =
     Base.IteratorEltype(A) isa Base.HasEltype ? Base.promote_op(func, eltype(A)) : Any

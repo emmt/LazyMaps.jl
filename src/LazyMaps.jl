@@ -1,109 +1,127 @@
-#
-# LazyMaps.jl -
-#
-# Implementation of lazy maps for Julia.
-#
-#------------------------------------------------------------------------------
-#
-# This file is part of the `LazyMaps.jl` package licensed under the MIT
-# "Expat" License.
-#
-# Copyright (C) 2017, Éric Thiébaut.
-#
+"""
 
-isdefined(Base, :__precompile__) && __precompile__(true)
+`LazyMaps` provides lazily mapped arrays or collections for Julia.
 
+"""
 module LazyMaps
 
 export
     LazyMap,
     lazymap
 
-# Singleton type to indicate that the element type is unknown.
-struct Unknown; end
-const unknown = Unknown()
 using TypeUtils
 
-struct LazyMapArray{F,A<:AbstractArray,T,N} <: AbstractArray{T,N}
-    f::F # function or callable
-    a::A # input array/collection
-    v::T # first value or `unknown`
+struct LazyMapArray{T,N,F,A<:AbstractArray,L} <: AbstractArray{T,N}
+    func::F # function or callable
+    data::A # input array/collection
+    LazyMapArray{T}(func::F, data::A) where {T,N,F,A<:AbstractArray{<:Any,N}} =
+        new{T,N,F,A,IndexStyle(A) isa IndexLinear}(func, data)
 end
 
-struct LazyMapOther{F,A,T,N}
-    f::F # function or callable
-    a::A # input array/collection
+struct LazyMapOther{T,N,F,A}
+    func::F # function or callable
+    data::A # input array/collection
+    LazyMapOther{T}(func::F, data::A) where {T,F,A} =
+        new{T,infer_ndims(Base.IteratorSize(A)),F,A}(func, data)
 end
 
-const LazyMap{F,A,T,N} = Union{LazyMapArray{F,A,T,N},
-                               LazyMapOther{F,A,T,N}}
+const LazyMap{T,N,F,A} = Union{LazyMapArray{T,N,F,A},
+                               LazyMapOther{T,N,F,A}}
 
 """
-    lazymap(f, a [, guess=true])
+    B = lazymap([T::Type,] f, A)
 
-yields a read-only collection whose items are given by the function `f`
-applied *on-the-fly* to the items of `a`.  This is useful to provide an
-elementwise filtered array or collection to some method without creating an
-intermediate array or collection.
+yields a read-only array or collection `B` whose elements are given by the function `f`
+applied *on-the-fly* to those of `A`. This is useful to provide an elementwise array or
+collection filtered by some function without creating an intermediate array or collection.
 
-If `guess` is `true`, the method attempts to evaluate `f` for the first
-item of `a` to determine the type of the elements.  Set `guess` to `false`
-to avoid this at the cost of making some optimizations not possible.  Note
-that if the element type can be determined, it is assumed (and asserted)
-that all elements have the same type, *i.e.* the elements of result are
-**type stable**.
-
-See also [`map`](@ref).
+Optional argument `T` is to specify the element type of `B`. If unspecified, it is
+inferred from `f` and from the element type of `A`. The returned object `B` has
+type-stable element type in the sense that its element have guaranteed type `T`, even
+though `T` may be abstract.
 
 """
-lazymap(f, a::AbstractArray) = _lazymap(f, a, f(first(a)))
-lazymap(f, a::AbstractArray, guess::Bool) =
-    (guess ? lazymap(f, a) : _lazymap(f, a, unknown))
-lazymap(f::F, a::A) where {F,A} = LazyMapOther{F,A,Unknown,0}(f, a)
-lazymap(f::F, a::A, ::Bool) where {F,A} = LazyMapOther{F,A,Unknown,0}(f, a)
+lazymap(func::F, data::A) where {F,A} = lazymap(infer_eltype(func, data), func, data)
+lazymap(::Type{T}, func, data::AbstractArray) where {T} = LazyMapArray{T}(func, data)
+lazymap(::Type{T}, func, data::Any) where {T} = LazyMapOther{T}(func, data)
 
-_lazymap(f::F, a::A, v::T) where {F,A<:AbstractArray{E,N},T} where {E,N} =
-    LazyMapArray{F,A,T,N}(f, a, v)
+infer_eltype(func::F, data::A) where {F,A} =
+    Base.IteratorEltype(A) isa Base.HasEltype ? Base.promote_op(func, eltype(A)) : Any
 
-Base.getindex(m::LazyMapArray{F,A,T,N}, key...) where {F,A,T,N} =
-    m.f(m.a[key...]) :: T
-Base.getindex(m::LazyMap{F,A,Unknown,N}, key...) where {F,A,N} =
-    m.f(m.a[key...])
+# For collections, the shape traits are inferred according to the rules for tuples: if
+# `IteratorSize(A)` yields `HasShape{N}()`, then `A` has a length, a number of dimensions,
+# a size, and axes. Otherwise, if `IteratorSize(A)` yields `HasLength()`, then `A` has a
+# length but no number of dimensions, size, nor axes.
+infer_ndims(trait::Base.HasShape{N}) where {N} = N
+infer_ndims(trait::Base.IteratorSize) = -1
 
-Base.eltype(m::LazyMap{F,A,T,N}) where {F,A,T,N} = T
-Base.eltype(m::LazyMap{F,A,Unknown,N}) where {F,A,N} =
-    error("element type is unknown")
-Base.length(m::LazyMap) = length(m.a)
-Base.ndims(m::LazyMapArray{F,A,T,N}) where {F,A,T,N} = N
-Base.size(m::LazyMapArray) = size(m.a)
-Base.size(m::LazyMapArray, d) = size(m.a, d)
-Base.stride(m::LazyMapArray, k) = stride(m.a, k)
-Base.strides(m::LazyMapArray) = strides(m.a)
-Base.indices(m::LazyMapArray) = indices(m.a)
-Base.indices(m::LazyMapArray, d) = indices(m.a, d)
-Base.first(m::LazyMap{F,A,Unknown,N}) where {F,A,N} = m.f(first(m.a))
-Base.first(m::LazyMapArray) = m.v
-Base.last(m::LazyMap) = m.f(last(m.a))
-Base.endof(m::LazyMap) = endof(m.a)
-#Base.eachindex(m::LazyMap) = eachindex(m.a)
-#Base.eachindex(m::LazyMap, args...) = eachindex(m.a, args...)
+# Traits for LazyMap instances.
+Base.IteratorSize(::Type{<:LazyMapOther{T,N,F,A}}) where {T,N,F,A} = Base.IteratorSize(A)
+Base.IteratorEltype(::Type{<:LazyMapOther{T,N,F,A}}) where {T,N,F,A} = Base.IteratorEltype(A)
 
-# Make an instance of a LazyMap an iterable.
-Base.start(m::LazyMap) = start(m.a)
-Base.done(m::LazyMap, state) = done(m.a, state)
-function Base.next(m::LazyMap, state)
-    item, state = next(m.a, state)
-    return m.f(item), state
+# Abstract array API for instances of LazyMapArray.
+Base.length(m::LazyMapArray) = length(m.data)
+Base.size(m::LazyMapArray) = size(m.data)
+Base.axes(m::LazyMapArray) = axes(m.data)
+Base.strides(m::LazyMapArray) = strides(m.data)
+Base.stride(m::LazyMapArray, k::Integer) = stride(m.data, k)
+
+Base.similar(m::LazyMapArray, ::Type{T}) where {T} = similar(m.data, T)
+Base.similar(m::LazyMapArray, ::Type{T}, shape::Union{Dims,ArrayAxes}) where {T} =
+    similar(m.data, T, shape)
+
+for (L, S, Idecl, Icall) in ((false, :IndexCartesian, :(I::Vararg{Int,N}), :(I...)),
+                             (true,  :IndexLinear,    :(i::Int),           :(i)))
+    @eval begin
+        Base.IndexStyle(::Type{<:LazyMapArray{T,N,F,A,$L}}) where {T,N,F,A} = $S()
+        @inline function Base.getindex(m::LazyMapArray{T,N,F,A,$L}, $Idecl) where {T,N,F,A}
+            @boundscheck checkbounds(m, $Icall)
+            x = @inbounds getindex(m.data, $Icall)
+            return as(T, m.func(x))
+        end
+        @inline function Base.setindex!(m::LazyMapArray{T,N,F,A,$L}, x, $Idecl) where {T,N,F,A}
+            @boundscheck checkbounds(A, $Icall)
+            throw_read_only()
+            return m
+        end
+    end
 end
 
-# Provide traits for LazyMap instances.
-Base.IndexStyle(::Type{LazyMapArray{F,A,T,N}}) where {F,A,T,N} =
-    Base.IndexStyle(A)
-Base.iteratorsize(::Type{LazyMap{F,A,T,N}}) where {F,A,T,N} =
-    Base.iteratorsize(A)
-Base.iteratoreltype(::Type{LazyMap{F,A,Unknown,N}}) where {F,A,N} =
-    Base.EltypeUnknown()
-Base.iteratoreltype(::Type{LazyMap{F,A,T,N}}) where {F,A,T,N} =
-    Base.HasEltype()
+# Iterator and (partial) abstract array API for instances of LazyMapOther.
+Base.eltype(m::LazyMapOther{T,N}) where {T,N} = T
+Base.eltype(::Type{<:LazyMapOther{T,N}}) where {T,N} = T
+
+Base.ndims(m::LazyMapOther) = ndims(typeof(m))
+Base.ndims(::Type{<:LazyMapOther{T,N}}) where {T,N} = N
+Base.ndims(::Type{<:LazyMapOther{T,-1}}) where {T} = throw_unknown_ndims()
+
+Base.length(m::LazyMapOther) = _length(Base.IteratorSize(m), m.data)
+_length(trait::Base.HasLength, data) = length(data)
+_length(trait::Base.HasShape, data) = prod(_size(trait, data))
+_length(trait::Base.IteratorSize, data) = throw_unknown_length()
+
+Base.size(m::LazyMapOther) = _size(Base.IteratorSize(m), m.data)
+_size(trait::Base.HasShape, data) = map(length, axes(data))
+_size(trait::Base.IteratorSize, data) = throw_unknown_shape()
+
+Base.axes(m::LazyMapOther) = _axes(Base.IteratorSize(m), m.data)
+_axes(trait::Base.HasShape, data) = axes(data)
+_axes(trait::Base.IteratorSize, data) = throw_unknown_shape()
+
+# Make an instance of LazyMapOther an iterable.
+Base.iterate(m::LazyMapOther) = _iterate_result(m, iterate(m.data))
+Base.iterate(m::LazyMapOther, s) = _iterate_result(m, iterate(m.data, s))
+_iterate_result(m::LazyMapOther{T}, r::Nothing) where {T} = nothing
+_iterate_result(m::LazyMapOther{T}, r::Tuple{Any,Any}) where {T} =
+    (as(T, m.func(r[1])), r[2])
+
+@noinline throw_read_only() =
+    throw(ArgumentError("attempt to write read-only lazily mapped array"))
+@noinline throw_unknown_ndims() =
+    throw(ArgumentError("collection in lazy map has no defined number of dimensions"))
+@noinline throw_unknown_length() =
+    throw(ArgumentError("collection in lazy map has no defined length"))
+@noinline throw_unknown_shape() =
+    throw(ArgumentError("collection in lazy map has no defined shape"))
 
 end

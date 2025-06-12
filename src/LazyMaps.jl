@@ -98,7 +98,6 @@ for (L, S, Idecl, Icall) in ((false, :IndexCartesian, :(I::Vararg{Int,N}), :(I..
         @inline function Base.setindex!(m::LazyMapArray{T,N,F,A,$L}, x, $Idecl) where {T,N,F,A}
             @boundscheck checkbounds(A, $Icall)
             throw_read_only()
-            return m
         end
     end
 end

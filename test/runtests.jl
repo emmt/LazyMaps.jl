@@ -68,7 +68,7 @@ Base.iterate(A::IteratedArray, s) = iterate(A.data, s)
 
         T′ = T <: Complex ? Complex{Float64} : Float64
         B = @inferred(lazymap(T′, A))
-        @test B === lazymap(T′, T′, A)
+        @test B === lazymap(T′, LazyMaps.pass, A)
         @test eltype(B) === T′
         @test B == T′.(A)
         C = @inferred(lazymap(T′, identity, A))
@@ -122,7 +122,7 @@ Base.iterate(A::IteratedArray, s) = iterate(A.data, s)
         A = (1, 2f0, 3.0, 0x04)
         T = Int
         B = @inferred(lazymap(T, A))
-        @test B === lazymap(T, T, A)
+        @test B === lazymap(T, LazyMaps.pass, A)
         @test eltype(B) === T
         for (a,b) in zip(A,B)
             @test b === T(a)

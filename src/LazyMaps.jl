@@ -10,6 +10,8 @@ export
     lazymap
 
 using TypeUtils
+using TypeUtils: @public
+@public result
 
 struct LazyMapArray{T,N,F,A<:AbstractArray,L} <: AbstractArray{T,N}
     func::F # callable or type (unused if type)
@@ -112,7 +114,16 @@ for (S, Idecl, Icall) in ((:Linear,    :(i::Int),           :(i)),
     end
 end
 
-# Compute the value of a LazyMap element.
+"""
+    LazyMaps.result(B, x) -> x′
+
+yields the value returned by lazy map `B = lazymap([T,] f, A)` where the value of the
+associated array or collection `A` is `x`. This method may be specialized based of the
+type of the callable `f`:
+
+    LazyMaps.result(B::LazyMap{T,N,typeof(f), x) where {T,N} = ...
+
+"""
 result(m::LazyMap{T,N,F,A}, x) where {T,N,F,A} = as(T, m.func(x))
 result(m::LazyMap{T,N,DataType,A}, x) where {T,N,A} = T(x)::T
 result(m::LazyMap{T,N,typeof(pass),A}, x) where {T,N,A} = T(x)::T

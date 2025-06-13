@@ -12,19 +12,21 @@ export
 using TypeUtils
 
 struct LazyMapArray{T,N,F,A<:AbstractArray,L} <: AbstractArray{T,N}
-    func::F # function or callable
-    data::A # input array/collection
+    func::F # callable or type (unused if type)
+    data::A # input array
     LazyMapArray{T}(func::F, data::A) where {T,N,F,A<:AbstractArray{<:Any,N}} =
         new{T,N,F,A,IndexStyle(A) isa IndexLinear}(func, data)
 end
 
 struct LazyMapOther{T,N,F,A}
-    func::F # function or callable
-    data::A # input array/collection
+    func::F # callable or type (unused if type)
+    data::A # input collection
     LazyMapOther{T}(func::F, data::A) where {T,F,A} =
         new{T,infer_ndims(Base.IteratorSize(A)),F,A}(func, data)
 end
 
+const LazyMapArrayLinear{T,N,F,A} = LazyMapArray{T,N,F,A,true}
+const LazyMapArrayCartesian{T,N,F,A} = LazyMapArray{T,N,F,A,false}
 const LazyMap{T,N,F,A} = Union{LazyMapArray{T,N,F,A},
                                LazyMapOther{T,N,F,A}}
 
@@ -86,16 +88,18 @@ Base.similar(m::LazyMapArray, ::Type{T}) where {T} = similar(m.data, T)
 Base.similar(m::LazyMapArray, ::Type{T}, shape::Union{Dims,ArrayAxes}) where {T} =
     similar(m.data, T, shape)
 
-for (L, S, Idecl, Icall) in ((false, :IndexCartesian, :(I::Vararg{Int,N}), :(I...)),
-                             (true,  :IndexLinear,    :(i::Int),           :(i)))
+for (S, Idecl, Icall) in ((:Linear,    :(i::Int),           :(i)),
+                          (:Cartesian, :(I::Vararg{Int,N}), :(I...)))
+    type  = Symbol("LazyMapArray", S)
+    style = Symbol("Index", S)
     @eval begin
-        Base.IndexStyle(::Type{<:LazyMapArray{T,N,F,A,$L}}) where {T,N,F,A} = $S()
-        @inline function Base.getindex(m::LazyMapArray{T,N,F,A,$L}, $Idecl) where {T,N,F,A}
+        Base.IndexStyle(::Type{<:$type}) = $style()
+        @inline function Base.getindex(m::$type{T,N}, $Idecl) where {T,N}
             @boundscheck checkbounds(m, $Icall)
             x = @inbounds getindex(m.data, $Icall)
-            return result(T, m.func, x)
+            return result(m, x)
         end
-        @inline function Base.setindex!(m::LazyMapArray{T,N,F,A,$L}, x, $Idecl) where {T,N,F,A}
+        @inline function Base.setindex!(m::$type{T,N}, x, $Idecl) where {T,N}
             @boundscheck checkbounds(A, $Icall)
             throw_read_only()
         end
@@ -103,8 +107,8 @@ for (L, S, Idecl, Icall) in ((false, :IndexCartesian, :(I::Vararg{Int,N}), :(I..
 end
 
 # Compute the value of a LazyMap element.
-result(::Type{T}, f::F, x) where {T,F} = as(T, f(x))
-result(::Type{T}, ::Type{T}, x) where {T} = T(x)::T
+result(m::LazyMap{T,N,F,A}, x) where {T,N,F,A} = as(T, m.func(x))
+result(m::LazyMap{T,N,DataType,A}, x) where {T,N,A} = T(x)::T
 
 # Iterator and (partial) abstract array API for instances of LazyMapOther.
 Base.eltype(m::LazyMapOther{T,N}) where {T,N} = T
@@ -132,7 +136,7 @@ Base.iterate(m::LazyMapOther) = _iterate_result(m, iterate(m.data))
 Base.iterate(m::LazyMapOther, s) = _iterate_result(m, iterate(m.data, s))
 _iterate_result(m::LazyMapOther{T}, r::Nothing) where {T} = nothing
 _iterate_result(m::LazyMapOther{T}, r::Tuple{Any,Any}) where {T} =
-    (result(T, m.func, r[1]), r[2])
+    (result(m, r[1]), r[2])
 
 @noinline throw_read_only() =
     throw(ArgumentError("attempt to write read-only lazily mapped array"))

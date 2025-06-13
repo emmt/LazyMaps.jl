@@ -1,4 +1,4 @@
-# LazyMaps [![Build Status](https://github.com/emmt/LazyMaps.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/emmt/LazyMaps.jl/actions/workflows/CI.yml?query=branch%3Amain) [![Build Status](https://ci.appveyor.com/api/projects/status/github/emmt/LazyMaps.jl?svg=true)](https://ci.appveyor.com/project/emmt/LazyMaps-jl) [![Coverage](https://codecov.io/gh/emmt/LazyMaps.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/emmt/LazyMaps.jl)
+# LazyMaps [![Build Status](https://github.com/emmt/LazyMaps.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/emmt/LazyMaps.jl/actions/workflows/CI.yml?query=branch%3Amain) [![Build Status](https://ci.appveyor.com/api/projects/status/github/emmt/LazyMaps.jl?svg=true)](https://ci.appveyor.com/project/emmt/LazyMaps-jl) [![Coverage](https://codecov.io/gh/emmt/LazyMaps.jl/graph/badge.svg?token=TrH6Zp4Zr5)](https://codecov.io/gh/emmt/LazyMaps.jl)
 
 This package implements lazily mapped arrays or collections for
 [Julia](http://julialang.org/). A *lazy map*, say `B = lazymap(f, A)`, associates a

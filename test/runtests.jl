@@ -20,12 +20,16 @@ Base.iterate(A::IteratedArray, s) = iterate(A.data, s)
 
 @testset "LazyMaps" begin
 
+    @testset "miscellaneous" begin
+        @test LazyMaps.pass(π) === π
+    end
+
     @testset "arrays (f=$f, T=$T, dims=$(repr(dims)))" for (f,T,dims) in (
         (cos, Float32, (11,)),
         (abs2, Complex{Float32}, (2,3,4,)),)
 
         A = rand(T, dims)
-        B = @inferred(lazymap(f, A))
+        B = @inferred lazymap(f, A)
         @test B isa LazyMaps.LazyMapArray
         @test eltype(B) == typeof(f(zero(eltype(A))))
         @test ndims(B) == ndims(A)
@@ -59,7 +63,7 @@ Base.iterate(A::IteratedArray, s) = iterate(A.data, s)
         @test size(C) == dims
         @test axes(C) == rngs
 
-        B = @inferred(lazymap(Float64, f, A))
+        B = @inferred lazymap(Float64, f, A)
         @test B isa LazyMaps.LazyMapArray
         @test eltype(B) == Float64
         @test ndims(B) == ndims(A)
@@ -73,7 +77,7 @@ Base.iterate(A::IteratedArray, s) = iterate(A.data, s)
         if ndims(A) == 3
             C = view(A, :, 2:3, :) # this array has Cartesian indexing
             @test IndexStyle(C) isa IndexCartesian
-            B = @inferred(lazymap(f, C))
+            B = @inferred lazymap(f, C)
             @test B isa LazyMaps.LazyMapArray
             @test eltype(B) == typeof(f(zero(eltype(C))))
             @test ndims(B) == ndims(C)
@@ -86,11 +90,11 @@ Base.iterate(A::IteratedArray, s) = iterate(A.data, s)
         end
 
         T′ = T <: Complex ? Complex{Float64} : Float64
-        B = @inferred(lazymap(T′, A))
+        B = @inferred lazymap(T′, A)
         @test B === lazymap(T′, LazyMaps.pass, A)
         @test eltype(B) === T′
         @test B == T′.(A)
-        C = @inferred(lazymap(T′, identity, A))
+        C = @inferred lazymap(T′, identity, A)
         @test eltype(C) === T′
         @test C == B
     end
@@ -100,7 +104,7 @@ Base.iterate(A::IteratedArray, s) = iterate(A.data, s)
         A = Dict("A" => 33, "B" => 100, "C" => pi, "D" => 1f0)
         f((k,v)::Pair) = k => sin(v)
 
-        B = @inferred(lazymap(f, A))
+        B = @inferred lazymap(f, A)
         @test B isa LazyMaps.LazyMapOther
         @test eltype(B) === eltype(typeof(B))
         @test !isconcretetype(eltype(B))
@@ -115,7 +119,7 @@ Base.iterate(A::IteratedArray, s) = iterate(A.data, s)
             @test last(b) === sin(last(a))
         end
 
-        B = @inferred(lazymap(Pair{String,Float16}, f, A))
+        B = @inferred lazymap(Pair{String,Float16}, f, A)
         @test eltype(B) <: Pair{String,Float16}
         for (a,b) in zip(A,B)
             @test first(b) == first(a)
@@ -125,7 +129,7 @@ Base.iterate(A::IteratedArray, s) = iterate(A.data, s)
         A = rand(Float32, 2,3,4)
         B = IteratedArray(A)
         f = sqrt
-        C = @inferred(lazymap(f, B))
+        C = @inferred lazymap(f, B)
         @test C isa LazyMaps.LazyMapOther
         @test eltype(C) == typeof(f(zero(eltype(A))))
         @test ndims(C) == ndims(A)
@@ -140,13 +144,13 @@ Base.iterate(A::IteratedArray, s) = iterate(A.data, s)
 
         A = (1, 2f0, 3.0, 0x04)
         T = Int
-        B = @inferred(lazymap(T, A))
+        B = @inferred lazymap(T, A)
         @test B === lazymap(T, LazyMaps.pass, A)
         @test eltype(B) === T
         for (a,b) in zip(A,B)
             @test b === T(a)
         end
-        C = @inferred(lazymap(T, identity, A))
+        C = @inferred lazymap(T, identity, A)
         @test eltype(C) === T
         for (b,c) in zip(B,C)
             @test b === c

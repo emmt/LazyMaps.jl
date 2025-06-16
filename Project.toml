@@ -1,7 +1,7 @@
 name = "LazyMaps"
 uuid = "0f65a36a-af8f-424e-b067-d751494a2e7b"
 authors = ["Éric Thiébaut <eric.thiebaut@univ-lyon1.fr>"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 TypeUtils = "c3b1956e-8857-4d84-9b79-890df85b1e67"

@@ -4,11 +4,12 @@ This page describes the most important changes in `Neutrals`. The format is base
 a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic
 Versioning](https://semver.org).
 
-## Unreleased
+
+## Version 0.2.0 (2025/06/16)
 
 ### Added
 
-- `B = lazymap([T::Type,] f, A, finv)` with `A` an array builds a **writable** lazy mapped
+- `B = lazymap([T::Type,] f, A::AbstractArray, finv)` builds a **writable** lazy mapped
   array.
 
 - Tests with [`Aqua.jl`](https://github.com/JuliaTesting/Aqua.jl).
@@ -19,3 +20,5 @@ Versioning](https://semver.org).
 
 
 ## Version 0.1.0 (2025/06/16)
+
+- Initial release.

@@ -1,14 +1,17 @@
-# LazyMaps [![Build Status](https://github.com/emmt/LazyMaps.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/emmt/LazyMaps.jl/actions/workflows/CI.yml?query=branch%3Amain) [![Build Status](https://ci.appveyor.com/api/projects/status/github/emmt/LazyMaps.jl?svg=true)](https://ci.appveyor.com/project/emmt/LazyMaps-jl) [![Coverage](https://codecov.io/gh/emmt/LazyMaps.jl/graph/badge.svg?token=TrH6Zp4Zr5)](https://codecov.io/gh/emmt/LazyMaps.jl)
+# LazyMaps: mapped arrays and collections with deferred evaluation
+
+[![Build Status](https://github.com/emmt/LazyMaps.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/emmt/LazyMaps.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![Build Status](https://ci.appveyor.com/api/projects/status/github/emmt/LazyMaps.jl?svg=true)](https://ci.appveyor.com/project/emmt/LazyMaps-jl)
+[![Coverage](https://codecov.io/gh/emmt/LazyMaps.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/emmt/LazyMaps.jl)
+[![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
 This package implements lazily mapped arrays or collections for
 [Julia](http://julialang.org/). A *lazy map*, say `B = lazymap(f, A)`, associates a
 function `f` and an array or a collection `A` in an object `B` whose elements are the
 element-wise result of the function `f` applied to `A`. This is similar to calling `map(f,
 A)` except that evaluation is performed *on the fly* and thus avoids the storage that
-would be required by an intermediate array or collection. *Lazy maps* are therefore useful
-to provide an element-wise filtered array or collection to some method without creating an
-intermediate array or collection. This can save storage and speedup computations for large
-arrays or collections.
+would be required by an intermediate array or collection. *Lazy maps* save storage and may
+speedup computations for large arrays or collections.
 
 ## Basic usage
 

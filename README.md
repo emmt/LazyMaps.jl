@@ -44,6 +44,16 @@ end
 
 Incidentally `collect(B)` is the same as `map(f, a)` or `f.(a)`.
 
+If `A` is an array and `finv` is a function, a *writable lazy map* is built by:
+
+```julia
+B = lazymap(f, A, finv)
+```
+
+Then, the syntax `B[i] = x` is allowed and has the side effect of changing the
+corresponding element of `A`, as if `A[i] = finv(x)` has been called. It is worth noting
+that it is not imposed that `finv` be the inverse of `f`.
+
 
 ## Element type stability
 
@@ -53,7 +63,7 @@ for any element `a` of `A` but without actually calling `f` (i.e. using
 explicitly by building `B` as:
 
 ```julia
-B = lazymap(T, f, A)
+B = lazymap(T, f, A[, finv])
 ```
 
 where `T::Type` does not need to be `typeof(f(a))`, any needed conversion will be lazily
@@ -71,17 +81,17 @@ the element type of `A`.
 Compared to `Iterators.map(f, A)` which is always an iterator, the object returned by
 `lazymap(f, A)` is an (abstract) array if `A` is an array, an iterator otherwise.
 
-Objects `lazymap(T, identity, A)` and, if `T` is a `Number`, `lazymap(T, A)` are the
-read-only analogue of `of_eltype(T, A)` provided by
+`lazymap(T, A)` is the analogue of `of_eltype(T, A)` provided by
 [`MappedArrays`](https://github.com/JuliaArrays/MappedArrays.jl) or of `as_eltype(T, A)`
 provided by [`TypeUtils`](https://github.com/emmt/TypeUtils.jl).
 
-Compared to `mappedarray(f, A)` in the
+Compared to `mappedarray(f, A)` or `mappedarray(f, finv, A)` with the
 [`MappedArrays`](https://github.com/JuliaArrays/MappedArrays.jl) package, the element type
-of the result may be explicitly specified by `lazymap(T, f, A)`. In any case, the result
-is type-stable. `LazyMaps` does not implement read-write mapped arrays nor lazily mapping
-multiple arrays, both possibilities are offered by `MappedArrays`. These may be done in
-the future.
+of the result may be explicitly specified by `lazymap(T, f, A)` or by `lazymap(T, f, A,
+finv)`. In any case, the result of a lazy map is type-stable.
+
+`LazyMaps` does not implement lazily mapping multiple arrays, a possibility are offered by
+`MappedArrays`. This may be done in the future.
 
 
 ## Installation

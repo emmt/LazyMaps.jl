@@ -58,6 +58,41 @@ end
         @test B == f.(A)
         @test_throws Exception B[firstindex(B)] = B[lastindex(B)] # read-only by default
 
+        if f === cos
+            # Build a writable lazy array.
+            B = @inferred lazymap(cos, A, acos)
+            @test B isa LazyMaps.LazyMapArray
+            @test eltype(B) == typeof(f(zero(eltype(A))))
+            @test ndims(B) == ndims(A)
+            @test length(B) == length(A)
+            @test size(B) == size(A)
+            @test axes(B) == axes(A)
+            @test strides(B) == strides(A)
+            for k in 1:ndims(B)
+                @test stride(B, k) == stride(A, k)
+            end
+            @test IndexStyle(B) == IndexStyle(A)
+            @test B == f.(A)
+            A[firstindex(A)] = 0.2
+            B[firstindex(B)] = 1
+            @test A[firstindex(A)] == 0
+            B[firstindex(B)] = -1
+            @test A[firstindex(A)] ≈ π
+            B[firstindex(B)] = 1//2
+            @test A[firstindex(A)] ≈ π/3
+
+            # Idem with a different element type.
+            C = @inferred lazymap(Float64, cos, A, acos)
+            @test eltype(C) == Float64
+            C[firstindex(C)] = 1
+            @test A[firstindex(A)] == 0
+            C[firstindex(C)] = -1
+            @test A[firstindex(A)] ≈ π rtol=1e-6
+            C[firstindex(C)] = 1//2
+            @test A[firstindex(A)] ≈ π/3 rtol=1e-6
+
+        end
+
         # similar
         C = @inferred similar(B)
         @test typeof(C) <: Array{eltype(B), ndims(B)}
@@ -105,7 +140,7 @@ end
 
         T′ = T <: Complex ? Complex{Float64} : Float64
         B = @inferred lazymap(T′, A)
-        @test B === lazymap(T′, LazyMaps.pass, A)
+        @test typeof(B) === typeof(lazymap(T′, LazyMaps.pass, A, LazyMaps.pass))
         @test eltype(B) === T′
         @test B == T′.(A)
         C = @inferred lazymap(T′, identity, A)
@@ -158,6 +193,9 @@ end
         for (a,c) in zip(A,C)
             @test c === f(a)
         end
+
+        # Cannot build a writable lazy iterator.
+        @test_throws Exception lazymap(f, B, x -> x^2)
 
         A = (1, 2f0, 3.0, 0x04)
         T = Int

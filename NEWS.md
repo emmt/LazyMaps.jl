@@ -8,6 +8,9 @@ Versioning](https://semver.org).
 
 ### Added
 
+- `B = lazymap([T::Type,] f, A, finv)` with `A` an array builds a **writable** lazy mapped
+  array.
+
 - Tests with [`Aqua.jl`](https://github.com/JuliaTesting/Aqua.jl).
 
 ### Fixed

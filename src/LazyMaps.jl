@@ -13,11 +13,12 @@ using TypeUtils
 using TypeUtils: @public
 @public result
 
-struct LazyMapArray{T,N,F,A<:AbstractArray,L} <: AbstractArray{T,N}
-    func::F # callable or type (unused if type)
+struct LazyMapArray{T,N,F,A<:AbstractArray,L,B} <: AbstractArray{T,N}
+    func::F # forward function, (callable or type, unused if type)
     data::A # input array
-    LazyMapArray{T}(func::F, data::A) where {T,N,F,A<:AbstractArray{<:Any,N}} =
-        new{T,N,F,A,IndexStyle(A) isa IndexLinear}(func, data)
+    invf::B # backward function (callable of unknown)
+    LazyMapArray{T}(func::F, data::A, invf::B) where {T,N,F,A<:AbstractArray{<:Any,N},B} =
+        new{T,N,F,A,IndexStyle(A) isa IndexLinear,B}(func, data, invf)
 end
 
 struct LazyMapOther{T,N,F,A}
@@ -27,8 +28,6 @@ struct LazyMapOther{T,N,F,A}
         new{T,infer_ndims(Base.IteratorSize(A)),F,A}(func, data)
 end
 
-const LazyMapArrayLinear{T,N,F,A} = LazyMapArray{T,N,F,A,true}
-const LazyMapArrayCartesian{T,N,F,A} = LazyMapArray{T,N,F,A,false}
 const LazyMap{T,N,F,A} = Union{LazyMapArray{T,N,F,A},
                                LazyMapOther{T,N,F,A}}
 
@@ -63,11 +62,31 @@ element of `A`; while, in the latter case, it is given by `b = T(a)::T`. Note th
 both cases, it is asserted that `b` is indeed of type `T`. The two cases are equivalent if
 `T` is a number.
 
-"""
-lazymap(func::F, data::A) where {F,A} = lazymap(infer_eltype(func, data), func, data)
-lazymap(::Type{T}, func, data::AbstractArray) where {T} = LazyMapArray{T}(func, data)
-lazymap(::Type{T}, func, data::Any) where {T} = LazyMapOther{T}(func, data)
-lazymap(::Type{T}, data) where {T} = lazymap(T, pass, data)
+If `A` is an array and `invf` is a function, the call:
+
+    B = lazymap([T::Type,] f, A, invf)
+
+yields a lazy mapped array `B` whose elements can be set with the syntax `B[i] = x` and
+with the side effect of modifying the corresponding element of `A` as if `A[i] = invf(x)`
+has been evaluated. If the objective is to convert in the two direction between the
+type `T` and `eltype(A)`, it sufficient to build `B` as `B = lazymap(T, A)`.
+
+""" function lazymap end
+
+# 2 arguments constructors.
+lazymap(f, data) = lazymap(infer_eltype(f, data), f, data)
+lazymap(::Type{T}, data::AbstractArray) where {T} = LazyMapArray{T}(pass, data, pass)
+lazymap(::Type{T}, data::Any) where {T} = lazymap(T, pass, data)
+
+# 3 arguments constructors.
+@inline lazymap(f, data, invf) =
+    data isa AbstractArray ? lazymap(infer_eltype(f, data), f, data, invf) :
+    throw(ArgumentError("in `lazymap(f, data, invf)`, `data` must be an array"))
+lazymap(::Type{T}, f, data::AbstractArray) where {T} = LazyMapArray{T}(f, data, Unknown())
+lazymap(::Type{T}, f, data::Any) where {T} =  LazyMapOther{T}(f, data)
+
+# 4 arguments constructor.
+lazymap(::Type{T}, f, data::AbstractArray, invf) where {T} = LazyMapArray{T}(f, data, invf)
 
 infer_eltype(func::F, data::A) where {F,A} =
     Base.IteratorEltype(A) isa Base.HasEltype ? Base.promote_op(func, eltype(A)) : Unknown
@@ -104,20 +123,31 @@ for shape in (:Dims,
         similar(m.data, T, shape)
 end
 
-for (S, Idecl, Icall) in ((:Linear,    :(i::Int),           :(i)),
-                          (:Cartesian, :(I::Vararg{Int,N}), :(I...)))
-    type  = Symbol("LazyMapArray", S)
-    style = Symbol("Index", S)
+for (style, Idecl, Icall) in ((:IndexLinear,    :(i::Int),           :(i)),
+                              (:IndexCartesian, :(I::Vararg{Int,N}), :(I...)))
+    linear = (style === :IndexLinear)
     @eval begin
-        Base.IndexStyle(::Type{<:$type}) = $style()
-        @inline function Base.getindex(m::$type{T,N}, $Idecl) where {T,N}
+        Base.IndexStyle(::Type{<:LazyMapArray{T,N,F,A,$linear}}) where {T,N,F,A} =
+            $style()
+        @inline function Base.getindex(m::LazyMapArray{T,N,F,A,$linear},
+                                       $Idecl) where {T,N,F,A}
             @boundscheck checkbounds(m, $Icall)
             x = @inbounds getindex(m.data, $Icall)
             return result(m, x)
         end
-        @inline function Base.setindex!(m::$type{T,N}, x, $Idecl) where {T,N}
-            @boundscheck checkbounds(A, $Icall)
+        @inline function Base.setindex!(m::LazyMapArray{T,N,F,A,$linear}, x,
+                                        $Idecl) where {T,N,F,A}
+            @boundscheck checkbounds(m.data, $Icall)
+            unsafe_setindex!(m, x, $Icall)
+            return m
+        end
+        function unsafe_setindex!(m::LazyMapArray{T,N,F,A,$linear,Unknown}, x,
+                                  $Idecl) where {T,N,F,A}
             throw_read_only()
+        end
+        function unsafe_setindex!(m::LazyMapArray{T,N,F,A,$linear}, x,
+                                  $Idecl) where {T,N,F,A}
+            @inbounds setindex!(m.data, m.invf(x), $Icall)
         end
     end
 end
@@ -126,8 +156,8 @@ end
     LazyMaps.result(B, x) -> x′
 
 yields the value returned by lazy map `B = lazymap([T,] f, A)` where the value of the
-associated array or collection `A` is `x`. This method may be specialized based of the
-type of the callable `f`:
+associated array or collection `A` is `x`. This method may be specialized based on the
+type of the callable `f` provided it is :
 
     LazyMaps.result(B::LazyMap{T,N,typeof(f), x) where {T,N} = ...
 

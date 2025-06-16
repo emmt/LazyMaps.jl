@@ -111,6 +111,9 @@ end
         C = @inferred lazymap(T′, identity, A)
         @test eltype(C) === T′
         @test C == B
+        C = @inferred lazymap(T′, T′, A)
+        @test eltype(C) === T′
+        @test C == B
     end
 
     @testset "collections" begin

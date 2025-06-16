@@ -190,6 +190,11 @@ end
         @test_throws Exception axes(B)
         @test_throws Exception size(B)
     end
+
+    if VERSION ≥ v"1.6"
+        include("aqua.jl")
+    end
+
 end
 
 end # module

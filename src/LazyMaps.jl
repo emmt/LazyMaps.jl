@@ -97,6 +97,7 @@ Base.strides(m::LazyMapArray) = strides(m.data)
 Base.stride(m::LazyMapArray, k::Integer) = stride(m.data, k)
 
 for shape in (:Dims,
+              :(Tuple{Integer,Vararg{Integer}}),
               :(Tuple{Union{Integer,UnitRange{<:Integer}},
                       Vararg{Union{Integer,UnitRange{<:Integer}}}}))
     @eval Base.similar(m::LazyMapArray, ::Type{T}, shape::$shape) where {T} =

@@ -36,8 +36,9 @@ const LazyMap{T,N,F,A} = Union{LazyMapArray{T,N,F,A},
     B = lazymap([T::Type,] f, A)
 
 yields a read-only array or collection `B` whose elements are given by the function `f`
-applied *on-the-fly* to those of `A`. This is useful to provide an elementwise array or
-collection filtered by some function without creating an intermediate array or collection.
+applied *on-the-fly* to the elements of `A`. This is useful to provide an array or
+collection with elementwise transformation by some function wit no needs for intermediate
+storage.
 
 Optional argument `T` is to specify the element type of `B`. If unspecified, it is
 inferred from `f` and from the element type of `A`. The returned object `B` has
@@ -55,7 +56,7 @@ contrast:
 
 lazily **constructs** an object of type `T` for each element of `A`. In the former case,
 an element `b` of `B` is given by `b = convert(T, a)::T` with `a` the corresponding
-element of `A` ; while, in the latter case, it is given by `b = T(a)::T`. Note that, in
+element of `A`; while, in the latter case, it is given by `b = T(a)::T`. Note that, in
 both cases, it is asserted that `b` is indeed of type `T`. The two cases are equivalent if
 `T` is a number.
 

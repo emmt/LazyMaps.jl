@@ -68,9 +68,10 @@ the element type of `A`.
 Compared to `Iterators.map(f, A)` which is always an iterator, the object returned by
 `lazymap(f, A)` is an (abstract) array if `A` is an array, an iterator otherwise.
 
-The object `lazymap(T, identity, A)` is the read-only analogue of `of_eltype(T, A)`
-provided by [`MappedArrays`](https://github.com/JuliaArrays/MappedArrays.jl) or of
-`as_eltype(T, A)` provided by [`TypeUtils`](https://github.com/emmt/TypeUtils.jl).
+Objects `lazymap(T, identity, A)` and, if `T` is a `Number`, `lazymap(T, A)` are the
+read-only analogue of `of_eltype(T, A)` provided by
+[`MappedArrays`](https://github.com/JuliaArrays/MappedArrays.jl) or of `as_eltype(T, A)`
+provided by [`TypeUtils`](https://github.com/emmt/TypeUtils.jl).
 
 Compared to `mappedarray(f, A)` in the
 [`MappedArrays`](https://github.com/JuliaArrays/MappedArrays.jl) package, the element type

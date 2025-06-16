@@ -44,22 +44,22 @@ end
 
 Incidentally `collect(B)` is the same as `map(f, a)` or `f.(a)`.
 
-If `A` is an array and `finv` is a function, a *writable lazy map* is built by:
+If `A` is an array while `f` and `finv` are functions, a *writable lazy map* is built by:
 
 ```julia
 B = lazymap(f, A, finv)
 ```
 
 Then, the syntax `B[i] = x` is allowed and has the side effect of changing the
-corresponding element of `A`, as if `A[i] = finv(x)` has been called. It is worth noting
-that it is not imposed that `finv` be the inverse of `f`.
+corresponding element of `A`, as if `A[i] = finv(x)` has been called. It may be of
+interest to realize that it is not imposed that `finv` be the inverse of `f`.
 
 
 ## Element type stability
 
 By default, `lazymap` attempts to infer the element type of lazy map `B` as that of `f(a)`
 for any element `a` of `A` but without actually calling `f` (i.e. using
-`Base.promote_op`). It is possible to specify the element type `T` of the lazy map
+`Base.promote_op`). It is however possible to specify the element type `T` of the lazy map
 explicitly by building `B` as:
 
 ```julia

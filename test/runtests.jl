@@ -38,7 +38,26 @@ Base.iterate(A::IteratedArray, s) = iterate(A.data, s)
         end
         @test IndexStyle(B) == IndexStyle(A)
         @test B == f.(A)
-        @test_throws Exception B[firstindex(B)] = B[lastindex(B)]
+        @test_throws Exception B[firstindex(B)] = B[lastindex(B)] # read-only by default
+
+        # similar
+        C = @inferred similar(B)
+        @test typeof(C) <: Array{eltype(B), ndims(B)}
+        @test axes(C) == axes(B)
+        T′ = T <: Complex ? Complex{Float64} : Float64
+        C = @inferred similar(B, T′)
+        @test typeof(C) <: Array{T′, ndims(B)}
+        @test axes(C) == axes(B)
+        rngs = (Base.OneTo(3),(Base.OneTo(5)))
+        dims = map(length, rngs)
+        C = @inferred similar(B, T′, dims)
+        @test typeof(C) <: Array{T′, 2}
+        @test size(C) == dims
+        @test axes(C) == rngs
+        C = @inferred similar(B, T′, rngs)
+        @test typeof(C) <: Array{T′,2}
+        @test size(C) == dims
+        @test axes(C) == rngs
 
         B = @inferred(lazymap(Float64, f, A))
         @test B isa LazyMaps.LazyMapArray

@@ -93,9 +93,12 @@ Base.axes(m::LazyMapArray) = axes(m.data)
 Base.strides(m::LazyMapArray) = strides(m.data)
 Base.stride(m::LazyMapArray, k::Integer) = stride(m.data, k)
 
-Base.similar(m::LazyMapArray, ::Type{T}) where {T} = similar(m.data, T)
-Base.similar(m::LazyMapArray, ::Type{T}, shape::Union{Dims,ArrayAxes}) where {T} =
-    similar(m.data, T, shape)
+for shape in (:Dims,
+              :(Tuple{Union{Integer,UnitRange{<:Integer}},
+                      Vararg{Union{Integer,UnitRange{<:Integer}}}}))
+    @eval Base.similar(m::LazyMapArray, ::Type{T}, shape::$shape) where {T} =
+        similar(m.data, T, shape)
+end
 
 for (S, Idecl, Icall) in ((:Linear,    :(i::Int),           :(i)),
                           (:Cartesian, :(I::Vararg{Int,N}), :(I...)))

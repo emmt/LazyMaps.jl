@@ -18,6 +18,20 @@ Base.length(A::IteratedArray) = prod(size(A))
 Base.iterate(A::IteratedArray) = iterate(A.data)
 Base.iterate(A::IteratedArray, s) = iterate(A.data, s)
 
+struct Forever{T<:Tuple}
+    values::T
+end
+Base.IteratorSize(::Type{<:Forever{<:Tuple{Vararg{T}}}}) where {T} = Base.IsInfinite()
+Base.IteratorSize(::Type{<:Forever{<:Tuple{}}}) = Base.HasLength()
+Base.IteratorEltype(::Type{<:Forever{<:Tuple{Vararg{T}}}}) where {T} = Base.HasEltype()
+Base.IteratorEltype(::Type{<:Forever{<:Tuple{}}}) = Base.EltypeUnknown()
+Base.eltype(::Type{<:Forever{<:Tuple{Vararg{T}}}}) where {T} = T
+Base.length(iter::Forever{<:Tuple{}}) = 0
+function Base.iterate(A::Forever, s::Int = 0)
+    i = (s % length(A.values)) + 1
+    return A.values[i], i
+end
+
 @testset "LazyMaps" begin
 
     @testset "miscellaneous" begin
@@ -156,6 +170,22 @@ Base.iterate(A::IteratedArray, s) = iterate(A.data, s)
             @test b === c
         end
 
+        A = Forever((42,))
+        B = @inferred lazymap(x -> x + 2, A)
+        @test B isa LazyMaps.LazyMapOther
+        @test first(B) === 44
+        @test eltype(B) == Int
+        @test_throws Exception length(B)
+        @test_throws Exception axes(B)
+        @test_throws Exception size(B)
+
+        A = Forever(())
+        B = @inferred lazymap(x -> x + 2, A)
+        @test B isa LazyMaps.LazyMapOther
+        @test_throws Exception eltype(B)
+        @test length(B) == 0
+        @test_throws Exception axes(B)
+        @test_throws Exception size(B)
     end
 end
 

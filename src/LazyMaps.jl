@@ -32,6 +32,9 @@ const LazyMapArrayCartesian{T,N,F,A} = LazyMapArray{T,N,F,A,false}
 const LazyMap{T,N,F,A} = Union{LazyMapArray{T,N,F,A},
                                LazyMapOther{T,N,F,A}}
 
+# Singleton type to indicate unknown parameter or type.
+struct Unknown end
+
 """
     B = lazymap([T::Type,] f, A)
 
@@ -67,7 +70,7 @@ lazymap(::Type{T}, func, data::Any) where {T} = LazyMapOther{T}(func, data)
 lazymap(::Type{T}, data) where {T} = lazymap(T, pass, data)
 
 infer_eltype(func::F, data::A) where {F,A} =
-    Base.IteratorEltype(A) isa Base.HasEltype ? Base.promote_op(func, eltype(A)) : Any
+    Base.IteratorEltype(A) isa Base.HasEltype ? Base.promote_op(func, eltype(A)) : Unknown
 
 # For collections, the shape traits are inferred according to the rules for tuples: if
 # `IteratorSize(A)` yields `HasShape{N}()`, then `A` has a length, a number of dimensions,
@@ -133,8 +136,9 @@ result(m::LazyMap{T,N,DataType,A}, x) where {T,N,A} = T(x)::T
 result(m::LazyMap{T,N,typeof(pass),A}, x) where {T,N,A} = T(x)::T
 
 # Iterator and (partial) abstract array API for instances of LazyMapOther.
-Base.eltype(m::LazyMapOther{T,N}) where {T,N} = T
-Base.eltype(::Type{<:LazyMapOther{T,N}}) where {T,N} = T
+Base.eltype(m::LazyMapOther) = eltype(typeof(m))
+Base.eltype(::Type{<:LazyMapOther{T}}) where {T} = T
+Base.eltype(::Type{<:LazyMapOther{Unknown}}) = throw_unknown_eltype()
 
 Base.ndims(m::LazyMapOther) = ndims(typeof(m))
 Base.ndims(::Type{<:LazyMapOther{T,N}}) where {T,N} = N
@@ -168,5 +172,7 @@ _iterate_result(m::LazyMapOther{T}, r::Tuple{Any,Any}) where {T} =
     throw(ArgumentError("collection in lazy map has no defined length"))
 @noinline throw_unknown_shape() =
     throw(ArgumentError("collection in lazy map has no defined shape"))
+@noinline throw_unknown_eltype() =
+    throw(ArgumentError("collection in lazy map has no defined element type"))
 
 end

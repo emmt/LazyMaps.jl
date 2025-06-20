@@ -4,8 +4,12 @@ This page describes the most important changes in `Neutrals`. The format is base
 a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic
 Versioning](https://semver.org).
 
+## Version 0.2.1 (2025-06-20)
 
-## Version 0.2.0 (2025/06/16)
+This is the first official release.
+
+
+## Version 0.2.0 (2025-06-16)
 
 ### Added
 
@@ -19,6 +23,6 @@ Versioning](https://semver.org).
 - Some ambiguities in `similar`have been fixed.
 
 
-## Version 0.1.0 (2025/06/16)
+## Version 0.1.0 (2025-06-16)
 
 - Initial release.

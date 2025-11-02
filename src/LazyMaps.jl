@@ -1,15 +1,21 @@
 """
 
-`LazyMaps` provides lazily mapped arrays or collections for Julia. Typically:
+`LazyMaps` provides a single method, `lazymap`, to build lazily mapped arrays or collections
+for Julia. In a nutshell:
 
 ```julia
-B = lazymap([T::Type,] f, A[, f_inv])
+B = lazymap([T::Type,] f, A)
+B = lazymap([T::Type,] f, A::AbstractArray, f_inv = inverse(f))
 ```
 
-yields a view of `A` (an iterator or an array) such that the `i`-th element of `B` is given
-by `Bᵢ = f(Aᵢ)` with `Aᵢ` the `i`-th element of `A`. If `T` is specified, `Bᵢ = convert(T,
-f(Aᵢ))`. If `A` is an array, then the inverse `f_inv` of `f` may be specified to have a
-read-write view.
+yields a view of `A` such that the `i`-th element of `B` is given by `Bᵢ = as(T, f(Aᵢ))`
+with `Aᵢ` the `i`-th element of `A`. If `T` is unspecified, it is inferred from `f` and from
+the element type of `A`. If `A` is an array, then `f_inv` is assumed to be the inverse of
+`f` and `B[i] = x` amounts to do `A[i] = f_inv(x)`.
+
+The `as` and `inverse` methods are respectively provided by the
+[`TypeUtils`](https://github.com/emmt/TypeUtils.jl) and
+[`InverseFunctions`](https://github.com/JuliaMath/InverseFunctions.jl) packages.
 
 """
 module LazyMaps
@@ -21,6 +27,8 @@ export
 using TypeUtils
 using TypeUtils: @public
 @public result
+
+using InverseFunctions
 
 struct LazyMapArray{T,N,F,A<:AbstractArray,L,I} <: AbstractArray{T,N}
     f::F     # callable or type (unused if type)
@@ -37,6 +45,13 @@ struct LazyMapOther{T,N,F,A}
         new{T,infer_ndims(Base.IteratorSize(A)),F,A}(f, arg)
 end
 
+"""
+    LazyMap{T,N,F,A}
+
+Union of lazy mapped arrays or collections. `T` is the element type, `N` the number of
+dimensions, `F` the function type, and `A` the type of the argument of the lazy map.
+
+"""
 const LazyMap{T,N,F,A} = Union{LazyMapArray{T,N,F,A},
                                LazyMapOther{T,N,F,A}}
 
@@ -45,40 +60,36 @@ struct Unknown end
 
 """
     B = lazymap([T::Type,] f, A)
+    B = lazymap([T::Type,] f, A::AbstractArray, f_inv = inverse(f))
 
 Build a view of the array or iterator `A` such that the `i`-th element of `B` is given by
-`Bᵢ = f(Aᵢ)` with `Aᵢ` the `i`-th element of `A`.
+`Bᵢ = as(T, f(Aᵢ))` with `Aᵢ` the `i`-th element of `A` and where the `as` method is an
+extension of `convert` provided by the [`TypeUtils`](https://github.com/emmt/TypeUtils.jl)
+package.
 
-Optional argument `T` is to specify the element type of `B`. If unspecified, it is inferred
-from `f` and from the element type of `A`. The returned object `B` has type-stable element
+Optional argument `T` is to explicitly specify the element type of `B`; otherwise, it is
+inferred from `f` and from the element type of `A`. The lazy map `B` has type-stable element
 type in the sense that its element have guaranteed type `T`, even though `T` may be
 abstract.
 
-The call:
+If `A` is an array, `f_inv` is the assumed inverse of `f` such that `B[i] = x` has the side
+effect of modifying `A` by `A[i] = f_inv(x)`. If unspecified, `f_inv` is inferred by the
+`inverse` method of the
+[`InverseFunctions`](https://github.com/JuliaMath/InverseFunctions.jl) package.
+
+As a special case:
+
+    C = lazymap(T::Type, A)
+
+builds an object `C` that lazily maps the **constructor** `T` to the elements of `A`. This
+is not exactly the same as:
 
     B = lazymap(T::Type, identity, A)
 
-builds an object `B` that lazily **converts** the elements of `A` to type `T`. The `i`-th
-element of `B` is given by `Bᵢ = as(T, Aᵢ)`.
-
-By contrast:
-
-    B = lazymap(T::Type, A)
-
-lazily **constructs** an object of type `T` for each element of `A`. The `i`-th element of
-`B` is given by `Bᵢ = T(Aᵢ)::T`.
-
-Note that, in both cases, it is asserted that `Bᵢ` is of type `T`. The two cases are
-equivalent if `T` is a numeric type (a sub-type of `Number`).
-
-If `A` is an array, then:
-
-    B = lazymap([T::Type,] f, A, f_inv)
-
-yields a lazy mapped array `B` whose elements can be set with the syntax `B[i] = x` and with
-the side effect of modifying the corresponding element of `A` as if `A[i] = f_inv(x)` has
-been evaluated. If the objective is to convert in the two directions between the type `T`
-and `eltype(A)`, it sufficient to build `B` as `B = lazymap(T, A)`.
+which builds an object `B` that lazily **converts** the elements of `A` to type `T`. In
+other words, the `i`-th element of `C` is given by `Cᵢ = T(Aᵢ)::T`, while the `i`-th element
+of `B` is given by `Bᵢ = as(T, Aᵢ)`. In both cases, it is asserted that `Cᵢ` and `Bᵢ` are of
+type `T`. The two are equivalent if `T` is a numeric type (a sub-type of `Number`).
 
 """
 lazymap(f, arg::Any) = lazymap(infer_eltype(f, arg), f, arg)
@@ -89,7 +100,7 @@ function lazymap(f, arg::Any, f_inv)
 end
 lazymap(::Type{T}, arg::AbstractArray) where {T} = lazymap(T, pass, arg, pass)
 lazymap(::Type{T}, arg::Any) where {T} = lazymap(T, pass, arg)
-lazymap(::Type{T}, f, arg::AbstractArray) where {T} = lazymap(T, f, arg, Unknown())
+lazymap(::Type{T}, f, arg::AbstractArray) where {T} = lazymap(T, f, arg, inverse(f))
 lazymap(::Type{T}, f, arg::AbstractArray, f_inv) where {T} = LazyMapArray{T}(f, arg, f_inv)
 lazymap(::Type{T}, f, arg::Any) where {T} = LazyMapOther{T}(f, arg)
 lazymap(::Type{T}, f, arg::Any, f_inv) where {T} = throw(ArgumentError(
@@ -106,10 +117,11 @@ infer_eltype(f, arg::Any) =
 infer_ndims(trait::Base.HasShape{N}) where {N} = N
 infer_ndims(trait::Base.IteratorSize) = -1
 
-# Dummy function for lazy maps `B = lazymap(T, A)` computing their output as `T(x)::T`,
-# not as `convert(T, B.f(x))::T`. This function behaves like `identity` but has its own
-# type. Using it to implement the `T(x)::T` behavior results in a smaller size for `B`
-# which only stores one reference (to the data) instead of 2 (to the data and to `T`).
+# Dummy function for lazy maps `B = lazymap(T, A)` computing their output as `T(x)::T`, not
+# as `convert(T, B.f(x))::T`. This function behaves like `identity` but has its own type.
+# Using it to implement the `T(x)::T` behavior results in a smaller size for `B` which only
+# stores one reference (to the collection argument) instead of 2 (to the collection and to
+# `T`).
 pass(x) = x
 
 # Abstract array API for instances of LazyMapArray.
@@ -157,13 +169,15 @@ for (style, Idecl, Icall) in ((:IndexLinear,    :(i::Int),           :(i)),
 end
 
 """
-    LazyMaps.result(B, x) -> x′
+    LazyMaps.result(B, Aᵢ) -> Bᵢ
 
-Return the value returned by lazy map `B = lazymap([T,] f, A)` where the value of the
-associated array or collection `A` is `x`. This method may be specialized based on the
-type of the callable `f` provided it is:
+Compute the value returned by the lazy map `B = lazymap([T,] f, A)`. Here, `Aᵢ` and `Bᵢ` are
+the respective `i`-th value of `A` and `B`.
 
-    LazyMaps.result(B::LazyMap{T,N,typeof(f), x) where {T,N} = ...
+This method may be specialized based on the type of the callable `f` with the following
+signature:
+
+    LazyMaps.result(B::LazyMap{T,N,typeof(f)}, Bᵢ) where {T,N} = ...
 
 """
 result(m::LazyMap{T,N,F,A}, x) where {T,N,F,A} = as(T, m.f(x))

@@ -4,9 +4,16 @@ This page describes the most important changes in `Neutrals`. The format is base
 a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic
 Versioning](https://semver.org).
 
+## Unreleased
+
+### Added
+
+- Package [`InverseFunctions`](https://github.com/JuliaMath/InverseFunctions.jl) is used to
+  automatically infer the inverse function when possible.
+
 ## Version 0.2.1 (2025-06-20)
 
-This is the first official release.
+This version is a first candidate as an official package.
 
 
 ## Version 0.2.0 (2025-06-16)

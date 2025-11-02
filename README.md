@@ -5,75 +5,50 @@
 [![Coverage](https://codecov.io/gh/emmt/LazyMaps.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/emmt/LazyMaps.jl)
 [![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
-This package implements lazily mapped arrays or collections for
-[Julia](http://julialang.org/). A *lazy map*, say `B = lazymap(f, A)`, associates a
-function `f` and an array or a collection `A` in an object `B` whose elements are the
-element-wise result of the function `f` applied to `A`. This is similar to calling `map(f,
-A)` except that evaluation is performed *on the fly* and thus avoids the storage that
-would be required by an intermediate array or collection. *Lazy maps* save storage and may
-speedup computations for large arrays or collections.
 
-## Basic usage
+`LazyMaps` is a small [Julia](http://julialang.org/) package providing lazily mapped arrays or collections.
 
-To build a *lazy map* combining the function `f` and the array or collection `A`, call:
+## Usage
+
+`using LazyMaps` exports a single method:
 
 ```julia
-B = lazymap(f, A)
+B = lazymap([T::Type,] f, A)
+B = lazymap([T::Type,] f, A::AbstractArray, f_inv = inverse(f))
 ```
 
-If `A` is an array, the object `B` is a read-only abstract array (of same shape and
-indexing style as `A`) such that `B[i]` yields `f(A[i])` for any valid index `i` of `A`.
+yield a view of the array or iterator `A` such that the `i`-th element of `B` is given by
+`Bᵢ = as(T, f(Aᵢ))` with `Aᵢ` the `i`-th element of `A` and where the `as` method is an
+extension of `convert` provided by the [`TypeUtils`](https://github.com/emmt/TypeUtils.jl)
+package.
 
-Even though `A` is not an array, it is assumed to be iterable and so is the lazy map `B`.
-Hence:
+Optional argument `T` is to explicitly specify the element type of `B`; otherwise, it is
+inferred from `f` and from the element type of `A`. The lazy map `B` has type-stable element
+type in the sense that its element have guaranteed type `T`, even though `T` may be
+abstract.
+
+If `A` is an array, `f_inv` is the assumed inverse of `f` such that `B[i] = x` has the side
+effect of modifying `A` by `A[i] = f_inv(x)`. If unspecified, `f_inv` is inferred by the
+`inverse` method of the
+[`InverseFunctions`](https://github.com/JuliaMath/InverseFunctions.jl) package.
+
+As a special case:
 
 ```julia
-for b in B
-    ...
-end
+C = lazymap(T::Type, A)
 ```
 
-is a shortcut for:
+builds an object `C` that lazily maps the **constructor** `T` to the elements of `A`. This
+is not exactly the same as:
 
 ```julia
-for a in A
-    b = f(a)
-    ...
-end
+B = lazymap(T::Type, identity, A)
 ```
 
-Incidentally `collect(B)` is the same as `map(f, a)` or `f.(a)`.
-
-If `A` is an array while `f` and `finv` are functions, a *writable lazy map* is built by:
-
-```julia
-B = lazymap(f, A, finv)
-```
-
-Then, the syntax `B[i] = x` is allowed and has the side effect of changing the
-corresponding element of `A`, as if `A[i] = finv(x)` has been called. It may be of
-interest to realize that it is not imposed that `finv` be the inverse of `f`.
-
-
-## Element type stability
-
-By default, `lazymap` attempts to infer the element type of lazy map `B` as that of `f(a)`
-for any element `a` of `A` but without actually calling `f` (i.e. using
-`Base.promote_op`). It is however possible to specify the element type `T` of the lazy map
-explicitly by building `B` as:
-
-```julia
-B = lazymap(T, f, A[, finv])
-```
-
-where `T::Type` does not need to be `typeof(f(a))`, any needed conversion will be lazily
-performed when extracting elements from `B`.
-
-This latter rule is general: regardless of how `T = eltype(B)` is determined (explicitly
-of implicitly), each element `b` of `B` corresponding to the element `a` of `A` is given
-by converting `f(a)` to the type `T` so that `b::T` is guaranteed to hold. Hence , `B =
-lazymap(T, identity, A)` can be used to lazily convert the elements of `A` or to stabilize
-the element type of `A`.
+which builds an object `B` that lazily **converts** the elements of `A` to type `T`. In
+other words, the `i`-th element of `C` is given by `Cᵢ = T(Aᵢ)::T`, while the `i`-th element
+of `B` is given by `Bᵢ = as(T, Aᵢ)`. In both cases, it is asserted that `Cᵢ` and `Bᵢ` are of
+type `T`. The two are equivalent if `T` is a numeric type (a sub-type of `Number`).
 
 
 ## Related things

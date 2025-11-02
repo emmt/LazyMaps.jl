@@ -1,6 +1,6 @@
 module TestingLazyMaps
 
-using LazyMaps, Test, TypeUtils
+using LazyMaps, Test, TypeUtils, InverseFunctions
 
 # The following structure "hides" an abstract array in an iterator which has a "shape".
 struct IteratedArray{A<:AbstractArray}
@@ -39,7 +39,7 @@ end
     end
 
     @testset "arrays (f=$f, T=$T, dims=$(repr(dims)))" for (f,T,dims) in (
-        (cos, Float32, (11,)),
+        (exp, Float32, (11,)),
         (abs2, Complex{Float32}, (2,3,4,)),)
 
         A = rand(T, dims)
@@ -56,7 +56,13 @@ end
         end
         @test IndexStyle(B) == IndexStyle(A)
         @test B == f.(A)
-        @test_throws Exception B[firstindex(B)] = B[lastindex(B)] # read-only by default
+        if inverse(f) isa NoInverse
+            # read-only if inverse function does not exist
+            @test_throws Exception B[firstindex(B)] = B[lastindex(B)]
+        else
+            B[firstindex(B)] = B[lastindex(B)]
+            @test A[firstindex(A)] == A[lastindex(A)]
+        end
 
         if f === cos
             # Build a writable lazy array.

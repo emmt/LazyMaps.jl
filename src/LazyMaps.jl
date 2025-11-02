@@ -1,6 +1,15 @@
 """
 
-`LazyMaps` provides lazily mapped arrays or collections for Julia.
+`LazyMaps` provides lazily mapped arrays or collections for Julia. Typically:
+
+```julia
+B = lazymap([T::Type,] f, A[, f_inv])
+```
+
+yields a view of `A` (an iterator or an array) such that the `i`-th element of `B` is given
+by `Bᵢ = f(Aᵢ)` with `Aᵢ` the `i`-th element of `A`. If `T` is specified, `Bᵢ = convert(T,
+f(Aᵢ))`. If `A` is an array, then the inverse `f_inv` of `f` may be specified to have a
+read-write view.
 
 """
 module LazyMaps
@@ -37,32 +46,32 @@ struct Unknown end
 """
     B = lazymap([T::Type,] f, A)
 
-yields a read-only array or collection `B` whose elements are given by the function `f`
-applied *on-the-fly* to the elements of `A`. This is useful to provide an array or
-collection with elementwise transformation by some function wit no needs for intermediate
-storage.
+Build a view of the array or iterator `A` such that the `i`-th element of `B` is given by
+`Bᵢ = f(Aᵢ)` with `Aᵢ` the `i`-th element of `A`.
 
-Optional argument `T` is to specify the element type of `B`. If unspecified, it is
-inferred from `f` and from the element type of `A`. The returned object `B` has
-type-stable element type in the sense that its element have guaranteed type `T`, even
-though `T` may be abstract.
+Optional argument `T` is to specify the element type of `B`. If unspecified, it is inferred
+from `f` and from the element type of `A`. The returned object `B` has type-stable element
+type in the sense that its element have guaranteed type `T`, even though `T` may be
+abstract.
 
 The call:
 
-    B = lazymap(T, identity, A)
+    B = lazymap(T::Type, identity, A)
 
-builds an object `B` that lazily **converts** the elements of `A` to type `T`. By
-contrast:
+builds an object `B` that lazily **converts** the elements of `A` to type `T`. The `i`-th
+element of `B` is given by `Bᵢ = as(T, Aᵢ)`.
 
-    B = lazymap(T, A)
+By contrast:
 
-lazily **constructs** an object of type `T` for each element of `A`. In the former case,
-`Bᵢ`, the `i`-the element of `B`, is given by `Bᵢ = as(T, Aᵢ)` with `Aᵢ` the `i`-th element
-of `A`; while, in the latter case, it is given by `Bᵢ = T(Aᵢ)::T`. Note that, in both cases,
-it is asserted that `Bᵢ` is indeed of type `T`. The two cases are equivalent if `T` is a
-numeric type (a sub-type of `Number`).
+    B = lazymap(T::Type, A)
 
-If `A` is an array and `f_inv` is a function, the call:
+lazily **constructs** an object of type `T` for each element of `A`. The `i`-th element of
+`B` is given by `Bᵢ = T(Aᵢ)::T`.
+
+Note that, in both cases, it is asserted that `Bᵢ` is of type `T`. The two cases are
+equivalent if `T` is a numeric type (a sub-type of `Number`).
+
+If `A` is an array, then:
 
     B = lazymap([T::Type,] f, A, f_inv)
 

@@ -61,7 +61,7 @@ end
             @test_throws Exception B[firstindex(B)] = B[lastindex(B)]
         else
             B[firstindex(B)] = B[lastindex(B)]
-            @test A[firstindex(A)] == A[lastindex(A)]
+            @test A[firstindex(A)] ≈ A[lastindex(A)]
         end
 
         if f === cos

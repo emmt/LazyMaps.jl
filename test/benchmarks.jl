@@ -23,14 +23,24 @@ function simd_mapreduce(f, op, A::AbstractArray)
     return r
 end
 
+
+unsafe_apply(f, A::AbstractArray, i) = f(@inbounds A[i])
+unsafe_lazymap(f, A::AbstractArray, i) = @inbounds lazymap(f, A)[i]
+
 f1(x) = sqrt(abs2(oneunit(x)) + abs2(x))
 f2(x) = inv(f1(x))
 
 pinthreads(:cores)
 T = Float32
+
 for dims in ((3,4), (10_000,),)
     A = rand(T, dims)
     for f in (abs2, f1, f2)
+        println("\nTest with f=$(nameof(f)) that `lazymap` has no overheads:")
+        i = (firstindex(A) + lastindex(A)) ÷ 2
+        print(" f(@inbounds A[i])          "); @btime unsafe_apply($f, $A, $i);
+        print(" @inbounds lazymap(f, A)[i] "); @btime unsafe_lazymap($f, $A, $i);
+
         println("\nTests with $(prod(dims)) elements and f=$(nameof(f)):")
         fA = f.(A)
         B = BroadcastArray(f, A)

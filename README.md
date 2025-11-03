@@ -88,6 +88,14 @@ differences that justify the existence of this package:
   lazy maps are writable if inverse function is known or specified and can be used over
   other collections than arrays.
 
+As shown by [benchmark tests](./test/benchmarks.jl) for `LazyMaps` and these different
+packages, evaluating `B[i]` for an object `B` lazily representing `f.(A)` is as fast as
+calling `f(A[i])`. Also any of these objects can be used with no allocations and, except
+`BroadcastArray`, no construction overheads compared to `f(A[i])`. A `BroadcastArray` using
+[`LazyArrays`](https://github.com/JuliaArrays/LazyArrays.jl) is as fast as `mapreduce` for
+reductions (like a `sum`) of the broadcast array which provides some speedup for large
+arrays.
+
 Direct dependencies:
 
 * [`InverseFunctions`](https://github.com/JuliaMath/InverseFunctions.jl) is used by

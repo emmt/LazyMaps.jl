@@ -53,21 +53,48 @@ type `T`. The two are equivalent if `T` is a numeric type (a sub-type of `Number
 
 ## Related things
 
-Compared to `Iterators.map(f, A)` which is always an iterator, the object returned by
-`lazymap(f, A)` is an (abstract) array if `A` is an array, an iterator otherwise.
+There exist objects or packages with functionalities similar to lazy maps but with
+differences that justify the existence of this package:
 
-`lazymap(T, A)` is the analogue of `of_eltype(T, A)` provided by
-[`MappedArrays`](https://github.com/JuliaArrays/MappedArrays.jl) or of `as_eltype(T, A)`
-provided by [`TypeUtils`](https://github.com/emmt/TypeUtils.jl).
+* Compared to `Iterators.map(f, A)` which is always an iterator, the object returned by
+  `lazymap(f, A)` is an (abstract) array if `A` is an array, an iterator otherwise.
 
-Compared to `mappedarray(f, A)` or `mappedarray(f, finv, A)` with the
-[`MappedArrays`](https://github.com/JuliaArrays/MappedArrays.jl) package, the element type
-of the result may be explicitly specified by `lazymap(T, f, A)` or by `lazymap(T, f, A,
-finv)`. In any case, the result of a lazy map is type-stable.
+* `mappedarray(f, A)` and `mappedarray(f, inv_f, A)` using
+  [`MappedArrays`](https://github.com/JuliaArrays/MappedArrays.jl) are similar to
+  `lazymap(f, A)` and `lazymap(f, A, inv_f)` but:
+  - `f_inv` is not automatically inferred by `mappedarray` if not specified;
+  - `A` must be an array in `mappedarray`;
+  - the element type of a mapped array is inferred and cannot be specified as for a lazy map
+    which is type-stable with respect to its `eltype`.
 
-`LazyMaps` does not implement lazily mapping multiple arrays, a possibility are offered by
-`MappedArrays`. This may be done in the future.
+* `lazymap(T, A)` is the analogue of `of_eltype(T, A)` and `as_eltype(T, A)` respectively
+  using [`MappedArrays`](https://github.com/JuliaArrays/MappedArrays.jl) and
+  [`TypeUtils`](https://github.com/emmt/TypeUtils.jl).
 
+* `LazyMaps` does not implement lazily mapping multiple arrays, a possibility offered by
+  `MappedArrays`, but this may be emulated by combining `LazyMaps` and
+  [`ZippedArrays`](https://github.com/emmt/ZippedArrays.jl).
+
+* `mapview(f, A)` using [`FlexiMaps`](https://github.com/JuliaAPlavin/FlexiMaps.jl) is very
+  similar to `lazymap(f, A)` but, with `FlexiMaps`, there is no equivalent to `lazymap(T,
+  f, A)` to specify an element type for the mapped view and directly build a
+  `FlexiMaps.MappedArray` with a given element type yields an abstract array whose `eltype`
+  is not the type of the result returned by `getindex` while `lazymap` takes care of
+  converting this result correctly.
+
+* `BroadcastArray(f, A)` and `BroadcastArray{T}(f, A)` using
+  [`LazyArrays`](https://github.com/JuliaArrays/LazyArrays.jl) is similar to `lazymap(f, A)`
+  and `lazymap(T, f, A)` but broadcast arrays are read-only and restricted to arrays while
+  lazy maps are writable if inverse function is known or specified and can be used over
+  other collections than arrays.
+
+Direct dependencies:
+
+* [`InverseFunctions`](https://github.com/JuliaMath/InverseFunctions.jl) is used by
+  `LazyMaps` to infer inverse functions.
+
+* [`TypeUtils`](https://github.com/emmt/TypeUtils.jl) is by `LazyMaps` to convert the values
+  returned by lazily mapped object.
 
 ## Installation
 

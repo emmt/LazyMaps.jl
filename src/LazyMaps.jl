@@ -112,7 +112,7 @@ infer_eltype(f, arg::Any) =
 # a size, and axes. Otherwise, if `IteratorSize(A)` yields `HasLength()`, then `A` has a
 # length but no number of dimensions, size, nor axes.
 infer_ndims(trait::Base.HasShape{N}) where {N} = N
-infer_ndims(trait::Base.IteratorSize) = -1
+infer_ndims(trait::Base.IteratorSize) = Unknown
 
 # Dummy function for lazy maps `B = lazymap(T, A)` computing their output as `T(x)::T`, not
 # as `convert(T, B.f(x))::T`. This function behaves like `identity` but has its own type.
@@ -137,8 +137,8 @@ for shape in (:Dims,
         similar(m.arg, T, shape)
 end
 
-for (style, Idecl, Icall) in ((:IndexLinear,    :(i::Int),           :(i)),
-                              (:IndexCartesian, :(I::Vararg{Int,N}), :(I...)))
+for (style, (Idecl, Icall)) in (:IndexLinear    => (:(i::Int),           :(i)),
+                                :IndexCartesian => (:(I::Vararg{Int,N}), :(I...)))
     linear = (style === :IndexLinear)
     @eval begin
         Base.IndexStyle(::Type{<:LazyMapArray{T,N,F,A,$linear}}) where {T,N,F,A} = $style()
@@ -195,7 +195,7 @@ Base.eltype(::Type{<:LazyMapAny{Unknown}}) = throw_unknown_eltype()
 
 Base.ndims(m::LazyMapAny) = ndims(typeof(m))
 Base.ndims(::Type{<:LazyMapAny{T,N}}) where {T,N} = N
-Base.ndims(::Type{<:LazyMapAny{T,-1}}) where {T} = throw_unknown_ndims()
+Base.ndims(::Type{<:LazyMapAny{T,Unknown}}) where {T} = throw_unknown_ndims()
 
 Base.length(m::LazyMapAny) = _length(Base.IteratorSize(m), m.arg)
 _length(trait::Base.HasLength, arg) = length(arg)

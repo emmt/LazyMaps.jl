@@ -38,10 +38,10 @@ struct LazyMapArray{T,N,F,A<:AbstractArray,L,I} <: AbstractArray{T,N}
         new{T,N,F,A,IndexStyle(A) isa IndexLinear,I}(f, arg, f_inv)
 end
 
-struct LazyMapOther{T,N,F,A}
+struct LazyMapAny{T,N,F,A}
     f::F   # callable or type (unused if type)
     arg::A # input collection
-    LazyMapOther{T}(f::F, arg::A) where {T,F,A} =
+    LazyMapAny{T}(f::F, arg::A) where {T,F,A} =
         new{T,infer_ndims(Base.IteratorSize(A)),F,A}(f, arg)
 end
 
@@ -53,7 +53,7 @@ dimensions, `F` the function type, and `A` the type of the argument of the lazy 
 
 """
 const LazyMap{T,N,F,A} = Union{LazyMapArray{T,N,F,A},
-                               LazyMapOther{T,N,F,A}}
+                               LazyMapAny{T,N,F,A}}
 
 # Singleton type to indicate unknown parameter or type.
 struct Unknown end
@@ -102,7 +102,7 @@ lazymap(::Type{T}, arg::AbstractArray) where {T} = lazymap(T, pass, arg, pass)
 lazymap(::Type{T}, arg::Any) where {T} = lazymap(T, pass, arg)
 lazymap(::Type{T}, f, arg::AbstractArray) where {T} = lazymap(T, f, arg, inverse(f))
 lazymap(::Type{T}, f, arg::AbstractArray, f_inv) where {T} = LazyMapArray{T}(f, arg, f_inv)
-lazymap(::Type{T}, f, arg::Any) where {T} = LazyMapOther{T}(f, arg)
+lazymap(::Type{T}, f, arg::Any) where {T} = LazyMapAny{T}(f, arg)
 lazymap(::Type{T}, f, arg::Any, f_inv) where {T} = throw(ArgumentError(
     "in `lazymap(T, f, arg, f_inv)`, `arg` must be an array"))
 
@@ -184,40 +184,40 @@ result(m::LazyMap{T,N,F,A}, x) where {T,N,F,A} = as(T, m.f(x))
 result(m::LazyMap{T,N,DataType,A}, x) where {T,N,A} = T(x)::T
 result(m::LazyMap{T,N,typeof(pass),A}, x) where {T,N,A} = T(x)::T
 
-# Iterator and (partial) abstract array API for instances of LazyMapOther.
-Base.IteratorEltype(::Type{<:LazyMapOther{T,N,F,A}}) where {T,N,F,A} =
+# Iterator and (partial) abstract array API for instances of LazyMapAny.
+Base.IteratorEltype(::Type{<:LazyMapAny{T,N,F,A}}) where {T,N,F,A} =
     Base.HasEltype()
-Base.IteratorEltype(::Type{<:LazyMapOther{T,N,F,A}}) where {T<:Unknown,N,F,A} =
+Base.IteratorEltype(::Type{<:LazyMapAny{T,N,F,A}}) where {T<:Unknown,N,F,A} =
     Base.EltypeUnknown()
 
-Base.IteratorSize(::Type{<:LazyMapOther{T,N,F,A}}) where {T,N,F,A} = Base.IteratorSize(A)
+Base.IteratorSize(::Type{<:LazyMapAny{T,N,F,A}}) where {T,N,F,A} = Base.IteratorSize(A)
 
-Base.eltype(m::LazyMapOther) = eltype(typeof(m))
-Base.eltype(::Type{<:LazyMapOther{T}}) where {T} = T
-Base.eltype(::Type{<:LazyMapOther{Unknown}}) = throw_unknown_eltype()
+Base.eltype(m::LazyMapAny) = eltype(typeof(m))
+Base.eltype(::Type{<:LazyMapAny{T}}) where {T} = T
+Base.eltype(::Type{<:LazyMapAny{Unknown}}) = throw_unknown_eltype()
 
-Base.ndims(m::LazyMapOther) = ndims(typeof(m))
-Base.ndims(::Type{<:LazyMapOther{T,N}}) where {T,N} = N
-Base.ndims(::Type{<:LazyMapOther{T,-1}}) where {T} = throw_unknown_ndims()
+Base.ndims(m::LazyMapAny) = ndims(typeof(m))
+Base.ndims(::Type{<:LazyMapAny{T,N}}) where {T,N} = N
+Base.ndims(::Type{<:LazyMapAny{T,-1}}) where {T} = throw_unknown_ndims()
 
-Base.length(m::LazyMapOther) = _length(Base.IteratorSize(m), m.arg)
+Base.length(m::LazyMapAny) = _length(Base.IteratorSize(m), m.arg)
 _length(trait::Base.HasLength, arg) = length(arg)
 _length(trait::Base.HasShape, arg) = prod(_size(trait, arg))
 _length(trait::Base.IteratorSize, arg) = throw_unknown_length()
 
-Base.size(m::LazyMapOther) = _size(Base.IteratorSize(m), m.arg)
+Base.size(m::LazyMapAny) = _size(Base.IteratorSize(m), m.arg)
 _size(trait::Base.HasShape, arg) = map(length, axes(arg))
 _size(trait::Base.IteratorSize, arg) = throw_unknown_shape()
 
-Base.axes(m::LazyMapOther) = _axes(Base.IteratorSize(m), m.arg)
+Base.axes(m::LazyMapAny) = _axes(Base.IteratorSize(m), m.arg)
 _axes(trait::Base.HasShape, arg) = axes(arg)
 _axes(trait::Base.IteratorSize, arg) = throw_unknown_shape()
 
-# Make an instance of LazyMapOther an iterable.
-Base.iterate(m::LazyMapOther) = _iterate_result(m, iterate(m.arg))
-Base.iterate(m::LazyMapOther, s) = _iterate_result(m, iterate(m.arg, s))
-_iterate_result(m::LazyMapOther{T}, r::Nothing) where {T} = nothing
-_iterate_result(m::LazyMapOther{T}, r::Tuple{Any,Any}) where {T} =
+# Make an instance of LazyMapAny an iterable.
+Base.iterate(m::LazyMapAny) = _iterate_result(m, iterate(m.arg))
+Base.iterate(m::LazyMapAny, s) = _iterate_result(m, iterate(m.arg, s))
+_iterate_result(m::LazyMapAny{T}, r::Nothing) where {T} = nothing
+_iterate_result(m::LazyMapAny{T}, r::Tuple{Any,Any}) where {T} =
     (result(m, r[1]), r[2])
 
 @noinline throw_read_only() =

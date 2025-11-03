@@ -163,7 +163,7 @@ end
         f((k,v)::Pair) = k => sin(v)
 
         B = @inferred lazymap(f, A)
-        @test B isa LazyMaps.LazyMapOther
+        @test B isa LazyMaps.LazyMapAny
         @test eltype(B) === eltype(typeof(B))
         @test !isconcretetype(eltype(B))
         @test_throws Exception ndims(B)
@@ -188,7 +188,7 @@ end
         B = IteratedArray(A)
         f = sqrt
         C = @inferred lazymap(f, B)
-        @test C isa LazyMaps.LazyMapOther
+        @test C isa LazyMaps.LazyMapAny
         @test eltype(C) == typeof(f(zero(eltype(A))))
         @test ndims(C) == ndims(A)
         @test length(C) == length(A)
@@ -219,7 +219,7 @@ end
 
         A = Forever((42,))
         B = @inferred lazymap(x -> x + 2, A)
-        @test B isa LazyMaps.LazyMapOther
+        @test B isa LazyMaps.LazyMapAny
         @test first(B) === 44
         @test eltype(B) == Int
         @test_throws Exception length(B)
@@ -228,7 +228,7 @@ end
 
         A = Forever(())
         B = @inferred lazymap(x -> x + 2, A)
-        @test B isa LazyMaps.LazyMapOther
+        @test B isa LazyMaps.LazyMapAny
         @test_throws Exception eltype(B)
         @test length(B) == 0
         @test_throws Exception axes(B)

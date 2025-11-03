@@ -201,7 +201,7 @@ end
         end
 
         # Cannot build a writable lazy iterator.
-        @test_throws Exception lazymap(f, B, x -> x^2)
+        @test_throws ArgumentError lazymap(exp, B, log)
 
         A = (1, 2f0, 3.0, 0x04)
         T = Int

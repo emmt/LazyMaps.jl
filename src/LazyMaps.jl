@@ -93,18 +93,15 @@ type `T`. The two are equivalent if `T` is a numeric type (a sub-type of `Number
 
 """
 lazymap(f, arg::Any) = lazymap(infer_eltype(f, arg), f, arg)
-function lazymap(f, arg::Any, f_inv)
-    arg isa AbstractArray || throw(ArgumentError(
-        "in `lazymap(f, arg, f_inv)`, `arg` must be an array"))
-    return lazymap(infer_eltype(f, arg), f, arg, f_inv)
-end
+lazymap(f, arg::Any, f_inv) = lazymap(infer_eltype(f, arg), f, arg, f_inv)
+
 lazymap(::Type{T}, arg::AbstractArray) where {T} = lazymap(T, pass, arg, pass)
 lazymap(::Type{T}, arg::Any) where {T} = lazymap(T, pass, arg)
 lazymap(::Type{T}, f, arg::AbstractArray) where {T} = lazymap(T, f, arg, inverse(f))
 lazymap(::Type{T}, f, arg::AbstractArray, f_inv) where {T} = LazyMapArray{T}(f, arg, f_inv)
 lazymap(::Type{T}, f, arg::Any) where {T} = LazyMapAny{T}(f, arg)
 lazymap(::Type{T}, f, arg::Any, f_inv) where {T} = throw(ArgumentError(
-    "in `lazymap(T, f, arg, f_inv)`, `arg` must be an array"))
+    "in `lazymap([T::Type,] f, arg, f_inv)`, `arg` must be an array"))
 
 infer_eltype(f, arg::AbstractArray) = Base.promote_op(f, eltype(arg))
 infer_eltype(f, arg::Any) =

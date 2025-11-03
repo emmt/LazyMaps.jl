@@ -30,7 +30,10 @@ abstract.
 If `A` is an array, `f_inv` is the assumed inverse of `f` such that `B[i] = x` has the side
 effect of modifying `A` by `A[i] = f_inv(x)`. If unspecified, `f_inv` is inferred by the
 `inverse` method of the
-[`InverseFunctions`](https://github.com/JuliaMath/InverseFunctions.jl) package.
+[`InverseFunctions`](https://github.com/JuliaMath/InverseFunctions.jl) package. If `f_inv =
+throw`, a read-only lazy map array is returned even though `inverse(f)` is known. Similarly,
+if `f = throw`, a write-only lazy map object is returned (you probably want to specify
+`f_inv` in this case).
 
 As a special case:
 

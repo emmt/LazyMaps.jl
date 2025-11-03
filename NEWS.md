@@ -11,6 +11,10 @@ Versioning](https://semver.org).
 - Package [`InverseFunctions`](https://github.com/JuliaMath/InverseFunctions.jl) is used to
   automatically infer the inverse function when possible.
 
+- `lazymap([T::Type,] f, A::AbstractArray, throw)` yields a read-only lazy map while
+  `lazymap([T::Type,] throw, A::AbstractArray, f_inv)` yields a write-only lazy map.
+
+
 ## Version 0.2.1 (2025-06-20)
 
 This version is a first candidate as an official package.

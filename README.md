@@ -59,6 +59,14 @@ differences that justify the existence of this package:
 * Compared to `Iterators.map(f, A)` which is always an iterator, the object returned by
   `lazymap(f, A)` is an (abstract) array if `A` is an array, an iterator otherwise.
 
+* `mapview(f, A)` using [`FlexiMaps`](https://github.com/JuliaAPlavin/FlexiMaps.jl) is very
+  similar to `lazymap(f, A)` but, with `FlexiMaps`, there is no equivalent to `lazymap(T, f,
+  A)` to specify an element type for the mapped view and directly build a
+  `FlexiMaps.MappedArray` with a given element type yields an abstract array whose `eltype`
+  is not the type of the result returned by `getindex` while `lazymap` takes care of
+  converting this result correctly. In `FlexiMaps`, there is no shortcut to build a
+  read-only view if the inverse function is known.
+
 * `mappedarray(f, A)` and `mappedarray(f, inv_f, A)` using
   [`MappedArrays`](https://github.com/JuliaArrays/MappedArrays.jl) are similar to
   `lazymap(f, A)` and `lazymap(f, A, inv_f)` but:
@@ -74,13 +82,6 @@ differences that justify the existence of this package:
 * `LazyMaps` does not implement lazily mapping multiple arrays, a possibility offered by
   `MappedArrays`, but this may be emulated by combining `LazyMaps` and
   [`ZippedArrays`](https://github.com/emmt/ZippedArrays.jl).
-
-* `mapview(f, A)` using [`FlexiMaps`](https://github.com/JuliaAPlavin/FlexiMaps.jl) is very
-  similar to `lazymap(f, A)` but, with `FlexiMaps`, there is no equivalent to `lazymap(T,
-  f, A)` to specify an element type for the mapped view and directly build a
-  `FlexiMaps.MappedArray` with a given element type yields an abstract array whose `eltype`
-  is not the type of the result returned by `getindex` while `lazymap` takes care of
-  converting this result correctly.
 
 * `BroadcastArray(f, A)` and `BroadcastArray{T}(f, A)` using
   [`LazyArrays`](https://github.com/JuliaArrays/LazyArrays.jl) is similar to `lazymap(f, A)`

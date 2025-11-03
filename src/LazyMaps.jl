@@ -75,7 +75,10 @@ abstract.
 If `A` is an array, `f_inv` is the assumed inverse of `f` such that `B[i] = x` has the side
 effect of modifying `A` by `A[i] = f_inv(x)`. If unspecified, `f_inv` is inferred by the
 `inverse` method of the
-[`InverseFunctions`](https://github.com/JuliaMath/InverseFunctions.jl) package.
+[`InverseFunctions`](https://github.com/JuliaMath/InverseFunctions.jl) package. If `f_inv =
+throw`, a read-only lazy map array is returned even though `inverse(f)` is known. Similarly,
+if `f = throw`, a write-only lazy map object is returned (you probably want to specify
+`f_inv` in this case).
 
 As a special case:
 
@@ -103,9 +106,10 @@ lazymap(::Type{T}, f, arg::Any) where {T} = LazyMapAny{T}(f, arg)
 lazymap(::Type{T}, f, arg::Any, f_inv) where {T} = throw(ArgumentError(
     "in `lazymap([T::Type,] f, arg, f_inv)`, `arg` must be an array"))
 
-infer_eltype(f, arg::AbstractArray) = Base.promote_op(f, eltype(arg))
-infer_eltype(f, arg::Any) =
-    Base.IteratorEltype(arg) isa Base.HasEltype ? Base.promote_op(f, eltype(arg)) : Unknown
+infer_eltype(f, arg::Any) = _infer_eltype(Base.IteratorEltype(arg), f, arg)
+_infer_eltype(trait::Base.HasEltype, f::typeof(throw), arg) = Unknown
+_infer_eltype(trait::Base.HasEltype, f, arg) = Base.promote_op(f, eltype(arg))
+_infer_eltype(trait::Base.IteratorEltype, f, arg) = Unknown
 
 # For collections, the shape traits are inferred according to the rules for tuples: if
 # `IteratorSize(A)` yields `HasShape{N}()`, then `A` has a length, a number of dimensions,
@@ -145,22 +149,16 @@ for (style, (Idecl, Icall)) in (:IndexLinear    => (:(i::Int),           :(i)),
         @inline function Base.getindex(m::LazyMapArray{T,N,F,A,$linear},
                                        $Idecl) where {T,N,F,A}
             @boundscheck checkbounds(m, $Icall)
+            F === typeof(throw) && throw_write_only()
             x = @inbounds getindex(m.arg, $Icall)
             return result(m, x)
         end
-        @inline function Base.setindex!(m::LazyMapArray{T,N,F,A,$linear}, x,
-                                        $Idecl) where {T,N,F,A}
+        @inline function Base.setindex!(m::LazyMapArray{T,N,F,A,$linear,Finv}, x,
+                                        $Idecl) where {T,N,F,A,Finv}
             @boundscheck checkbounds(m.arg, $Icall)
-            unsafe_setindex!(m, x, $Icall)
-            return m
-        end
-        function unsafe_setindex!(m::LazyMapArray{T,N,F,A,$linear,Unknown}, x,
-                                  $Idecl) where {T,N,F,A}
-            throw_read_only()
-        end
-        function unsafe_setindex!(m::LazyMapArray{T,N,F,A,$linear}, x,
-                                  $Idecl) where {T,N,F,A}
+            Finv === typeof(throw) && throw_read_only()
             @inbounds setindex!(m.arg, m.f_inv(x), $Icall)
+            return m
         end
     end
 end
@@ -218,7 +216,9 @@ _iterate_result(m::LazyMapAny{T}, r::Tuple{Any,Any}) where {T} =
     (result(m, r[1]), r[2])
 
 @noinline throw_read_only() =
-    throw(ArgumentError("attempt to write read-only lazily mapped array"))
+    throw(ArgumentError("attempt to write read-only lazily mapped object"))
+@noinline throw_write_only() =
+    throw(ArgumentError("attempt to read write-only lazily mapped object"))
 @noinline throw_unknown_ndims() =
     throw(ArgumentError("collection in lazy map has no defined number of dimensions"))
 @noinline throw_unknown_length() =

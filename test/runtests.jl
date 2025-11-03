@@ -42,7 +42,16 @@ end
         (exp, Float32, (11,)),
         (abs2, Complex{Float32}, (2,3,4,)),)
 
+        # Generate an array with different first and last values.
         A = rand(T, dims)
+        A_first = A[firstindex(A)]
+        A_last = A[lastindex(A)]
+        while isequal(A_first, A_last)
+            A[firstindex(A)] = rand(T)
+            A_first = A[firstindex(A)]
+        end
+
+        # Make a simple lazy map.
         B = @inferred lazymap(f, A)
         @test B isa LazyMaps.LazyMapArray
         @test eltype(B) == typeof(f(zero(eltype(A))))
@@ -56,12 +65,29 @@ end
         end
         @test IndexStyle(B) == IndexStyle(A)
         @test B == f.(A)
-        if inverse(f) isa NoInverse
-            # read-only if inverse function does not exist
-            @test_throws Exception B[firstindex(B)] = B[lastindex(B)]
+        f_inv = @inferred inverse(f)
+        if f_inv isa NoInverse
+            # B is read-only if inverse function is not specified and is not known.
+            @test_throws Exception B[firstindex(B)] = f(A[lastindex(A)])
         else
-            B[firstindex(B)] = B[lastindex(B)]
+            # B is writable.
+            B[firstindex(B)] = f(A[lastindex(A)])
             @test A[firstindex(A)] ≈ A[lastindex(A)]
+            A[firstindex(A)] = A_first # restore value
+
+            # Build a read-only lazy map.
+            Bro = @inferred lazymap(f, A, throw)
+            @test Bro == B # Bro is readable
+            @test_throws Exception Bro[firstindex(Bro)] = f(A[lastindex(A)]) # Bro is not writable
+            A[firstindex(A)] = A_first # restore value
+
+            # Build a write-only lazy map.
+            Bwo = @inferred lazymap(throw, A, f_inv)
+            @test eltype(Bwo) === LazyMaps.Unknown
+            Bwo[firstindex(Bwo)] = f(A[lastindex(A)]) # Bwo is writable
+            @test A[firstindex(A)] ≈ A[lastindex(A)]
+            A[firstindex(A)] = A_first # restore value
+            @test_throws Exception Bwo[firstindex(Bwo)] # Bwo is not readable
         end
 
         if f === cos

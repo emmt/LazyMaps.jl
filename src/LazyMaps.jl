@@ -31,7 +31,7 @@ using TypeUtils: @public
 using InverseFunctions
 
 struct LazyMapArray{T,N,F,A<:AbstractArray,L,I} <: AbstractArray{T,N}
-    f::F     # callable or type (unused if type)
+    f::F     # callable
     arg::A   # input array
     f_inv::I # inverse function (callable or unknown)
     LazyMapArray{T}(f::F, arg::A, f_inv::I) where {T,N,F,A<:AbstractArray{<:Any,N},I} =
@@ -39,7 +39,7 @@ struct LazyMapArray{T,N,F,A<:AbstractArray,L,I} <: AbstractArray{T,N}
 end
 
 struct LazyMapAny{T,N,F,A}
-    f::F   # callable or type (unused if type)
+    f::F   # callable
     arg::A # input collection
     LazyMapAny{T}(f::F, arg::A) where {T,F,A} =
         new{T,infer_ndims(Base.IteratorSize(A)),F,A}(f, arg)
@@ -176,7 +176,6 @@ signature:
 
 """
 result(m::LazyMap{T,N,F,A}, x) where {T,N,F,A} = as(T, m.f(x))
-result(m::LazyMap{T,N,DataType,A}, x) where {T,N,A} = T(x)::T
 result(m::LazyMap{T,N,typeof(pass),A}, x) where {T,N,A} = T(x)::T
 
 # Iterator and (partial) abstract array API for instances of LazyMapAny.

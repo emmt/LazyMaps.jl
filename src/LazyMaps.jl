@@ -119,10 +119,10 @@ infer_ndims(trait::Base.HasShape{N}) where {N} = N
 infer_ndims(trait::Base.IteratorSize) = Unknown
 
 # Dummy function for lazy maps `B = lazymap(T, A)` computing their output as `T(x)::T`, not
-# as `convert(T, B.f(x))::T`. This function behaves like `identity` but has its own type.
-# Using it to implement the `T(x)::T` behavior results in a smaller size for `B` which only
-# stores one reference (to the collection argument) instead of 2 (to the collection and to
-# `T`).
+# as `as(T, B.f(x))` which, in most cases, is similar to `convert(T, B.f(x))`. This function
+# behaves like `identity` but has its own type. Using it to implement the `T(x)::T` behavior
+# results in a smaller size for `B` which only stores one reference (to the collection
+# argument) instead of 2 (to the collection and to `T`).
 pass(x) = x
 
 # Abstract array API for instances of LazyMapArray.

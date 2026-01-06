@@ -5,6 +5,9 @@
 [![Coverage](https://codecov.io/gh/emmt/LazyMaps.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/emmt/LazyMaps.jl)
 [![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
+**The functionalities of `LazyMaps` are now provided by the
+[`TypeUtils`](https://github.com/emmt/TypeUtils.jl) package (version ≥ 1.14) which is an
+official Julia package.**
 
 `LazyMaps` is a small [Julia](http://julialang.org/) package providing lazily mapped arrays or collections.
 

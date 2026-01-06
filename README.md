@@ -105,8 +105,8 @@ Direct dependencies:
 * [`InverseFunctions`](https://github.com/JuliaMath/InverseFunctions.jl) is used by
   `LazyMaps` to infer inverse functions.
 
-* [`TypeUtils`](https://github.com/emmt/TypeUtils.jl) is by `LazyMaps` to convert the values
-  returned by lazily mapped object.
+* [`TypeUtils`](https://github.com/emmt/TypeUtils.jl) is used by `LazyMaps` to convert the
+  values returned by lazily mapped object.
 
 ## Installation
 

@@ -103,8 +103,8 @@ lazymap(::Type{T}, arg::Any) where {T} = lazymap(T, pass, arg)
 lazymap(::Type{T}, f, arg::AbstractArray) where {T} = lazymap(T, f, arg, inverse(f))
 lazymap(::Type{T}, f, arg::AbstractArray, f_inv) where {T} = LazyMapArray{T}(f, arg, f_inv)
 lazymap(::Type{T}, f, arg::Any) where {T} = LazyMapAny{T}(f, arg)
-lazymap(::Type{T}, f, arg::Any, f_inv) where {T} = throw(ArgumentError(
-    "in `lazymap([T::Type,] f, arg, f_inv)`, `arg` must be an array"))
+@noinline lazymap(::Type{T}, f, arg::A, f_inv) where {T,A} = throw(ArgumentError(
+    "in `lazymap([T::Type,] f, arg, f_inv)`, `arg` must be an array, got an instance of `$A`"))
 
 infer_eltype(f, arg::Any) = _infer_eltype(Base.IteratorEltype(arg), f, arg)
 _infer_eltype(trait::Base.HasEltype, f::typeof(throw), arg) = Unknown

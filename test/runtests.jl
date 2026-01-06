@@ -243,6 +243,7 @@ end
         A = Forever((42,))
         B = @inferred lazymap(x -> x + 2, A)
         @test B isa LazyMaps.LazyMapAny
+        @test @inferred(Base.IteratorEltype(B)) === Base.HasEltype()
         @test first(B) === 44
         @test eltype(B) == Int
         @test_throws Exception length(B)
@@ -252,6 +253,7 @@ end
         A = Forever(())
         B = @inferred lazymap(x -> x + 2, A)
         @test B isa LazyMaps.LazyMapAny
+        @test @inferred(Base.IteratorEltype(B)) === Base.EltypeUnknown()
         @test_throws Exception eltype(B)
         @test length(B) == 0
         @test_throws Exception axes(B)

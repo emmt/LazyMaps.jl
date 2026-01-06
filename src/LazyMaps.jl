@@ -124,6 +124,7 @@ infer_ndims(trait::Base.IteratorSize) = Unknown
 # results in a smaller size for `B` which only stores one reference (to the collection
 # argument) instead of 2 (to the collection and to `T`).
 pass(x) = x
+InverseFunctions.inverse(::typeof(pass)) = pass
 
 # Abstract array API for instances of LazyMapArray.
 

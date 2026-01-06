@@ -6,6 +6,10 @@ Versioning](https://semver.org).
 
 ## Unreleased
 
+## Added
+
+- `InverseFunctions.inverse(LazyMaps.pass)` yields `LazyMaps.pass`.
+
 ## Changed
 
 - `lazymap(T,T,A)` with type `T` and array `A` is no longer considered as special.

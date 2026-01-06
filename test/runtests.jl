@@ -35,7 +35,8 @@ end
 @testset "LazyMaps" begin
 
     @testset "miscellaneous" begin
-        @test LazyMaps.pass(π) === π
+        @test @inferred(LazyMaps.pass(π)) === π
+        @test @inferred(inverse(LazyMaps.pass)) === LazyMaps.pass
     end
 
     @testset "arrays (f=$f, T=$T, dims=$(repr(dims)))" for (f,T,dims) in (
